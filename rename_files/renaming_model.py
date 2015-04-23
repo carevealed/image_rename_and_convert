@@ -1,4 +1,4 @@
-from enum import Enum , unique
+from enum import Enum, unique
 import filecmp
 import hashlib
 import os
@@ -6,8 +6,18 @@ import sqlite3
 import shutil
 import sys
 
+
+@unique
+class running_mode(Enum):
+    NORMAL = 0
+    DEBUG = 1
+    BUILD = 2
+    INIT = 3
+
 CHECK_CHECKSUMS = True
 DEBUG = True
+BUILD_MODE = True
+MODE = running_mode.BUILD
 
 @unique
 class RecordStatus(Enum):
@@ -16,19 +26,58 @@ class RecordStatus(Enum):
     done = 2
 
 
-class NameRecord(object):
-    def __init__(self, original_name, new_name, queue, simple=True):
+class Singleton(type):
+    _instance = None
+    def __call__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instance
 
+class NameRecord(object):
+    def __init__(self, files, queue, obj_prefix, obj_num, proj_prefix, proj_num, path=None, simple=True):
         self.queue = queue
-        self.old_name = original_name
-        self.new_name = new_name
-        self.project_id = "adsfasdf"
-        self.object_id = "dsafasdf"
-        self.md5 = self._calculate_md5(original_name)
+        self.files = []
+        for file in files.files:
+            file['md5'] = self._calculate_md5(file['old'])
+            self.files.append(file)
+
+        self.project_id = proj_prefix + "_" + str(proj_num)
+        self.object_id = obj_prefix + "_" + str(obj_num)
+        self.project_id_prefix = proj_prefix
+        self.project_id_number = proj_num
+        self.object_id_prefix = obj_prefix
+        self.object_id_number = obj_num
+
+        # self.md5 = self._calculate_md5(original_name)
         self.isSimple = simple
         self.complex_obj_group = None
         self._status = RecordStatus.pending
 
+
+        ## USE THIS IF NEED BE ****************************************************************************************************
+    # def __init__(self, original_name, queue, object_id, project_id, file_type=None, new_name=None, path=None, simple=True):
+    #     self.queue = queue
+    #     self.old_name = original_name
+    #
+    #     if not new_name:
+    #         if path:
+    #             newpath = path
+    #         else:
+    #             # newpath = os.path.abspath(os.path.join(os.path.split(original_name)[0],"../newfiles/")) # FIXME WRONG FOLDER!!! REALLY BAD!!!
+    #             newpath = '/Volumes/CAVPPTestDrive/test'
+    #         _new_name = object_id
+    #         if file_type:
+    #             _new_name += ("_" + file_type)
+    #         self.new_name = os.path.join(newpath, (_new_name + os.path.splitext(original_name)[1]))
+    #     else:
+    #         self.new_name = new_name
+    #     self.project_id = project_id
+    #     self.object_id = object_id
+    #     self.md5 = self._calculate_md5(original_name)
+    #     self.isSimple = simple
+    #     self.complex_obj_group = None
+    #     self._status = RecordStatus.pending
+        ## USE THIS IF NEED BE ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     def get_status(self):
         return self._status
 
@@ -102,13 +151,15 @@ class RenameFactory(object):
     def status(self):
         return self._status
 
-    def add_queue(self, file_name, object_id_prefix, start_number):
-        if object_id_prefix in self.object_ids:
+    def add_queue(self, files, obj_id_prefix, obj_id_num, proj_id_prefix, proj_id_num):
+        if obj_id_prefix in self.object_ids:
             # print("found one")
             pass
         else:
-            self.object_ids[object_id_prefix] = start_number
-        new_queue = NameRecord(file_name, os.path.join(self.new_path, self.generate_CAVPP_name(object_id_prefix, file_name)),len(self._queues))
+            self.object_ids[obj_id_prefix] = obj_id_num
+
+
+        new_queue = NameRecord(files, len(self._queues), obj_prefix=obj_id_prefix, obj_num=obj_id_num, proj_prefix=proj_id_prefix, proj_num=proj_id_num)
         self._queues.append(new_queue)
 
     def remove_queue(self, file_name):
@@ -117,7 +168,7 @@ class RenameFactory(object):
         for queue in self._queues:
             if queue.old_name == file_name:
                 found_one = True
-                if DEBUG:
+                if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
                     print("Removing {0} from queue.".format(file_name))
             else:
                 temp_queues.append(queue)
@@ -143,19 +194,23 @@ class RenameFactory(object):
         return self._do_the_renaming(record)
 
     def _do_the_renaming(self, record):
-        new_path = os.path.split(record.new_name)[0]
-        if DEBUG:
-            print("Copying {0} to {1}".format(record.old_name, new_path), end="")
-        if not os.path.exists(new_path):
-            os.makedirs(new_path)
-        record.set_Working()
-        shutil.copy2(record.old_name, record.new_name)
-        if filecmp.cmp(record.old_name, record.new_name):
-            if DEBUG: print("  ...Success!")
-            record.set_Done()
-        else:
-            sys.stderr.write("Failed!\n")
-            raise IOError("File {0} does not match {1]".format(record.old_name, record.new_name))
+        if not isinstance(record, NameRecord):
+            raise TypeError
+        for file in record.files:
+            new_path = os.path.split(file['new'])[0]
+            if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
+                print("Copying {0} to {1}.".format(file['old'], new_path), end="")
+            if not os.path.exists(new_path):
+                os.makedirs(new_path)
+            record.set_Working()
+            shutil.copy2(file['old'], file['new'])
+            if filecmp.cmp(file['old'], file['new']):
+                if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
+                    print("  ... Success!")
+                record.set_Done()
+            else:
+                sys.stderr.write("Failed!\n")
+                raise IOError("File {0} does not match {1]".format(file['old'], file['new']))
 
         # print("Done")
         return record
@@ -167,14 +222,6 @@ class RenameFactory(object):
             print(queue.get_dict())
 
 
-    def generate_CAVPP_name(self, object_prefix, file_name):
-        # path = os.path.split(file_name)[0]
-        extension = os.path.splitext(file_name)[1]
-        new_name = object_prefix + "_" + str(self.object_ids[object_prefix]).zfill(5) + extension
-        # value = os.path.join(path, new_name)
-        self.object_ids[object_prefix] += 1
-        self.names_used.append(new_name)
-        return new_name
 
     def swap_queues(self, queue_a, queue_b):
         pass
@@ -185,52 +232,111 @@ def dict_factory(cursor, row):
         d[col[0]] = row[idx]
     return d
 
-class ReportFactory(object):
+
+class ReportFactory(metaclass=Singleton):
     '''
     This class interacts with the sqlite database for storing and retrieving the data for current and past renamings.
     This class is a singleton to avoid conflicts with writing and accessing the database.
     '''
-    _instance = None
+    # _instance = None
     _database = sqlite3.connect('data.db')
 
-    def __new__(cls, *args, **kwargs):
-        if not cls._instance:
-            cls._instance = super(ReportFactory, cls).__new__(cls, *args, **kwargs)
-        return cls._instance
-    def __init__(self):
+    # def __new__(cls, *args, **kwargs):
+    #     if not cls._instance:
+    #         cls._instance = super(ReportFactory, cls).__new__(cls, *args, **kwargs)
+    #     return cls._instance
+    def __init__(self, username=None):
+        if username:
+            self.username = username
+        else:
+            self.username = ""
         self.database = []
         self._database.row_factory = dict_factory
+        self.current_batch = 0
 
     def initize_database(self):
-        if DEBUG:
+        if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
             print("init the database")
-        self._database.execute('DROP TABLE IF EXISTS report')
-        self._database.execute('CREATE TABLE report('
-                               'id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 1 NOT NULL,'
-                               'source VARCHAR(255),'
-                               'object_id VARCHAR(255),'
-                               'project_id VARCHAR(255),'
-                               'destination VARCHAR(255),'
-                               'date_renamed DATE DEFAULT CURRENT_TIMESTAMP,'
-                               'md5 VARCHAR(32))')
+        if not MODE == running_mode.INIT:
+            try:
+                last_batch = self._database.execute('SELECT MAX(batch_id) from report').fetchone()['MAX(batch_id)']
+                if last_batch:
+                    self.current_batch = last_batch + 1
 
+                else:
+                    self.current_batch = 0
+            except sqlite3.OperationalError:
+                print("Unable to find database")
+
+        if MODE == running_mode.BUILD:
+            # NEW FORMAT
+            # Clear anything out if already exist
+            self._database.execute('DROP TABLE IF EXISTS jobs;')
+            self._database.execute('DROP TABLE IF EXISTS records;')
+            self._database.execute('DROP TABLE IF EXISTS files;')
+
+            # jobs table
+            self._database.execute('CREATE TABLE jobs('
+                                   'job_id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 1 NOT NULL, '
+                                   'username VARCHAR(255) );')
+            # records table
+            self._database.execute('CREATE TABLE records('
+                                   'record_id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 1 NOT NULL,'
+                                   'job_id INTEGER,'
+                                   'project_id_prefix VARCHAR(10),'
+                                   'project_id_number INTEGER,'
+                                   'object_id_prefix VARCHAR(10),'
+                                   'object_id_number INTERGER,'
+                                   'FOREIGN KEY(job_id) REFERENCES jobs(job_id));')
+
+            # files table
+            self._database.execute('CREATE TABLE files('
+                                   'file_id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 1 NOT NULL, '
+                                   'record_id INTEGER,'
+                                   'source VARCHAR(255),'
+                                   'destination VARCHAR(255),'
+                                   'date_renamed DATE DEFAULT CURRENT_TIMESTAMP,'
+                                   'md5 VARCHAR(32),'
+                                   'file_suffix VARCHAR(20),'
+                                   'file_extension VARCHAR(4),'
+                                   'file_notes TEXT,'
+                                   'FOREIGN KEY(record_id) REFERENCES records(record_id));')
+
+
+
+
+        self._database.execute('INSERT INTO jobs(username) '
+                               'VALUES(?)',
+                               (self.username,))
+        self.current_batch = self._database.execute('SELECT LAST_INSERT_ROWID()').fetchone()['LAST_INSERT_ROWID()']
         self._database.commit()
-        pass
 
     def add_record(self, record):
-        if DEBUG:
-            print("adding record")
-        self._database.execute('INSERT INTO report(source, destination, md5, project_id, object_id) VALUES(?,?,?,?,?)',
-                               (record.old_name, record.new_name, record.md5, record.project_id, record.object_id))
+        if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
+            print("Adding record")
+
+        # NEW WAY
+
+        self._database.execute('INSERT INTO records('
+                               'job_id, project_id_prefix, project_id_number, object_id_prefix, object_id_number) '
+                               'VALUES(?,?,?,?,?)',
+                               (self.current_batch, record.project_id_prefix, record.project_id_number, record.object_id_prefix, record.object_id_number))
+        record_id = self._database.execute('SELECT LAST_INSERT_ROWID()').fetchone()['LAST_INSERT_ROWID()']
+        for file in record.files:
+            self._database.execute('INSERT INTO files('
+                                   'record_id, source, destination, md5, file_suffix, file_extension) '
+                                   'VALUES(?,?,?,?,?,?)',
+                                   (record_id, file['old'], file['new'], file['md5'], "prsv", os.path.splitext(file['new'])[1]))
+
         self._database.commit()
         pass
 
     def show_current_records(self, object_id=None):
-        if DEBUG:
+        if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
             print("Getting record {0}.".format(object_id))
-        queury = self._database.execute('SELECT * FROM report WHERE object_id is \"{0}\"'.format(object_id))
-        for row in queury:
-            print(row)
+            queury = self._database.execute('SELECT * FROM report WHERE object_id is \"{0}\"'.format(object_id))
+            for row in queury:
+                print(row)
         pass
 
     def get_report(self, object_id=None):
@@ -238,3 +344,49 @@ class ReportFactory(object):
 
     def close_database(self):
         self._database.close()
+
+class record_bundle(object):
+
+    def __init__(self, object_id_prefix, object_id_number, path=None):
+        self.object_id_prefix = object_id_prefix
+        self.object_id_number = object_id_number
+        self._files = []
+        self.complex = False
+        if path:
+            self.path = path
+        else:
+            self.path = None
+
+    def __str__(self):
+        reply = ""
+        for file in self._files:
+            reply += str(file)
+        return reply
+    @property
+    def files(self):
+        return self._files
+
+    def add_file(self, file_name, new_name=None):
+        if not self._files:
+            if new_name:
+                file_pair = dict({"old": file_name, "new": new_name})
+            else:
+                file_pair = dict({"old": file_name, "new": self.generate_CAVPP_name(object_prefix=self.object_id_prefix, file_name=file_name, suffix="prsv")})
+        else:
+            self.complex = True
+            if new_name:
+                file_pair = dict({"old": file_name, "new": new_name})
+            else:
+                suffix = str(len(self._files)+1).zfill(4)+ "_presv"
+                file_pair = dict({"old": file_name, "new": self.generate_CAVPP_name(object_prefix=self.object_id_prefix, file_name=file_name, suffix=suffix)})
+
+        self._files.append(file_pair)
+
+
+    def generate_CAVPP_name(self, object_prefix, file_name, suffix):
+        # path = os.path.split(file_name)[0]
+        extension = os.path.splitext(file_name)[1]
+        new_name = object_prefix + "_" + str(self.object_id_number).zfill(5) +"_" + suffix + extension
+        if self.path:
+            new_name = os.path.join(self.path, new_name)
+        return new_name
