@@ -12,7 +12,7 @@ class running_mode(Enum):
     NORMAL = 0
     DEBUG = 1
     BUILD = 2
-MODE = running_mode.DEBUG
+MODE = running_mode.NORMAL
 
 
 def is_reponse_valid(response):
@@ -223,8 +223,7 @@ def start_cli(**kwargs):
 
         if 'object_id_start' in kwargs:
             try:
-                int(kwargs['object_id_start'])
-                first_object_id = kwargs['object_id_start']
+                first_object_id = int(kwargs['object_id_start'])
                 if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
                     print("object_id_start pass")
             except TypeError:
@@ -241,8 +240,7 @@ def start_cli(**kwargs):
 
         if 'project_id_start' in kwargs:
             try:
-                int(kwargs['project_id_start'])
-                first_project_id = kwargs['project_id_start']
+                first_project_id = int(kwargs['project_id_start'])
                 if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
                     print("project_id_start: pass")
             except TypeError:
@@ -267,7 +265,7 @@ def start_cli(**kwargs):
             continue
         display_settings(kwargs)
         while True:
-            is_user_happy = input("Are these correct? [y]/n/q ")
+            is_user_happy = input("Are these correct? [y]/n/q :")
             if is_user_happy.lower() == 'n' or is_user_happy.lower() == 'no':
                 needs_more_info = True
                 kwargs = update_information(kwargs)
@@ -279,7 +277,6 @@ def start_cli(**kwargs):
                 exit()
             else:
                 sys.stderr.write("Not a valid answer. Please try again.\n")
-
 
     if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
         print("All data tests pass. Moving on")
@@ -328,8 +325,27 @@ def start_cli(**kwargs):
                           proj_id_num=index + first_project_id)
 
 
+    for queue in builder.queues:
+        for file in queue.get_dict()['files']:
+            print("\"{}\" -> \"{}\"".format(file['old'], file['new']))
+        # print("{} {}".format(queue['files']['old'], queue['files']['new']))
+    valid = False
+    while(not valid):
+
+        answer = input("Are you sure? [y]/n/q :")
+        if answer.lower() == "n" or answer.lower() == "no" or answer.lower() == "q":
+            print("Okay, exiting")
+            quit()
+        elif answer.lower() == "y" or answer.lower() == "yes" or answer == "":
+            valid = True
+        else:
+            print("Not a valid input. Please try again.")
+
     reporter = rename_files.renaming_model.ReportFactory(username=user)
     reporter.initize_database()
+
+
+    # Perform the renaming
     for i in builder:
         record = builder.execute_rename_from_queue_by_record(i)
         reporter.add_record(record)
