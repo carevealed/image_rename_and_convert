@@ -103,10 +103,11 @@ class NameRecord(object):
 
     def get_dict(self):
         return {'queue': self.queue,
-                'original name': self.old_name,
-                'new name': self.new_name,
+                'files': self.files,
+                # 'original name': self.old_name,
+                # 'new name': self.new_name,
                 'project id': self.project_id,
-                'md5': self.md5,
+                # 'md5': self.md5,
                 'simple': self.isSimple,
                 'group': self.complex_obj_group,
                 'status': self._status}
