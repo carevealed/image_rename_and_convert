@@ -28,6 +28,8 @@ def is_valid_folder_name(response):
     pass
 
 
+
+# FIXME: Valid string isn't working at all
 def valid_str(key, keyname, kwargs):
     valid = False
     while not valid:
@@ -35,28 +37,30 @@ def valid_str(key, keyname, kwargs):
             if kwargs[key]:
                 if isinstance(kwargs[key], str):
                     print("{} {}".format("{}:".format(keyname), "[{}]".format(kwargs[key])), end="")
-                    response = input(" :").strip()
-                    if response:
-                        if not isinstance(response,str):
-                            sys.stderr.write("This data must be made up of letters.\n")
-                            continue
-                        if is_reponse_valid(response):
-                            # kwargs[key] = response
-                            valid = True
-                            return response
-                        else:
-                            valid = False
-                            continue
-                    else:
+                else:
+                    print("{}".format(keyname), end="")
+                response = input(" :").strip()
+                if response:
+                    if not isinstance(response, str):
+                        sys.stderr.write("This data must be made up of letters.\n")
+                        continue
+                    if is_reponse_valid(response):
+                        # kwargs[key] = response
                         valid = True
-                        return kwargs[key]
+                        return response
+                    else:
+                        valid = False
+                        continue
+                else:
+                    valid = True
+                    return kwargs[key]
 
             valid = True
         else:
             print("{}".format(keyname), end="")
             response = input(" :").strip()
             if response:
-                if not isinstance(response,str):
+                if not isinstance(response, str):
                     sys.stderr.write("This data must be made up of letters.\n")
                     continue
                 if is_reponse_valid(response):
@@ -160,7 +164,7 @@ def update_information(kwargs):
             if is_reponse_valid(response):
                 if is_valid_folder_name(response):
                     if not os.path.isdir(response):
-                        key = input("Folder does not exist, do with to create it? [Y]").lower()
+                        key = input("That folder does not exist. Do wish to create it? [Y]").lower()
                         if not key == "yes" and not key == "y" and not key == "":
                             valid = False
                             continue
@@ -171,9 +175,6 @@ def update_information(kwargs):
                 else:
                     print("Directory not found. Please try again or type [q] or [quit] and press enter.")
                     valid = False
-
-
-
     kwargs['object_id_prefix'] = valid_str('object_id_prefix', "Object ID MARC code", kwargs)
     kwargs['object_id_start'] = valid_int('object_id_start', 'Object ID starting number', kwargs)
     kwargs['project_id_prefix'] = valid_str('project_id_prefix', "Project ID MARC code", kwargs)
