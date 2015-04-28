@@ -56,6 +56,18 @@ Option 2: From source using Setuptools
         
 2. Enter your computer password and the script will install along with all the dependencies.
 
+## How to use:
+
+### Command line:
+
+1. In a terminal window type "rename -s " + the path to the files you want to rename.
+    
+    For example:
+    
+        rename -s /Volumes/CAVPPTestDrive/DPLA0003/Images/_Anaheim/
+
+2. Follow the instructions
+3. After the files are renamed to the new location, you will also find a report in the form of a CSV file in the same folder as the renamed files.
 
 ## Credits:
 * Henry Borchers
