@@ -30,7 +30,7 @@ https://github.com/cavpp/rename_files/releases. Right click on the link to lates
     
     For example:
     
-        sudo python3 -m pip install https://github.com/cavpp/rename_files/releases/download/Prerelease/rename_files-0.1-py2.py3-none-any.whl
+        sudo pip3 install https://github.com/cavpp/rename_files/releases/download/Prerelease/rename_files-0.1-py2.py3-none-any.whl
 
 #### Notes: 
 
