@@ -17,7 +17,7 @@ class running_mode(Enum):
 CHECK_CHECKSUMS = True
 DEBUG = True
 BUILD_MODE = True
-MODE = running_mode.BUILD
+MODE = running_mode.NORMAL
 
 @unique
 class RecordStatus(Enum):
@@ -259,10 +259,15 @@ class ReportFactory(metaclass=Singleton):
         if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
             print("init the database")
         if not MODE == running_mode.INIT:
+            # print("data.db: {}".format(os.path.exists('data.db')))
+            # dummy = self._database.execute('SHOW TABLES').fetchall()
+            # for dum in dummy:
+            #     print(dum)
             try:
-                last_batch = self._database.execute('SELECT MAX(batch_id) from report').fetchone()['MAX(batch_id)']
+                last_batch = self._database.execute('SELECT MAX(job_id) from jobs').fetchone()['MAX(job_id)']
+                # print("last_batch, type: {} value:{}".format(type(last_batch), last_batch))
                 if last_batch:
-                    self.current_batch = last_batch + 1
+                    self.current_batch = int(last_batch) + 1
 
                 else:
                     self.current_batch = 0
@@ -345,6 +350,15 @@ class ReportFactory(metaclass=Singleton):
 
     def close_database(self):
         self._database.close()
+
+    def get_last_job(self):
+        results = self._database.execute('SELECT source, destination, md5 '
+                                         'FROM jobs '
+                                         'JOIN records ON jobs.job_id=records.job_id '
+                                         'JOIN files ON records.record_id=files.record_id '
+                                         'WHERE jobs.job_id IS (?)', (self.current_batch,))
+        return results.fetchall()
+
 
 class record_bundle(object):
 
