@@ -352,7 +352,7 @@ class ReportFactory(metaclass=Singleton):
         self._database.close()
 
     def get_last_job(self):
-        results = self._database.execute('SELECT source, destination, md5, project_id_prefix, project_id_number '
+        results = self._database.execute('SELECT source, destination, md5, project_id_prefix, project_id_number, object_id_prefix, object_id_number '
                                          'FROM jobs '
                                          'JOIN records ON jobs.job_id=records.job_id '
                                          'JOIN files ON records.record_id=files.record_id '
