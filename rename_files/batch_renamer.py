@@ -112,5 +112,4 @@ def main():
     #     print("INTERACTIVE")
 
 if __name__ == '__main__':
-
     main()
