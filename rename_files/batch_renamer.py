@@ -72,8 +72,8 @@ def main():
                                                                    "identifier ")
     parser.add_argument('-x', '--object_id_start', type=int, help="the starting number for the object identifier")
 
-    parser.add_argument('-p', '--project_id_prefix', type=str, default="CAPS", help="MARC code for the institution used for the project "
-                                                                    "identifer. Default: CAPS")
+    parser.add_argument('-p', '--project_id_prefix', type=str, default="caps", help="MARC code for the institution used for the project "
+                                                                    "identifer. Default: caps")
     parser.add_argument('-y', '--project_id_start', type=int, help="the starting number for the object identifier")
 
     parser.add_argument('-u', '--username', type=str, help="Identify the user")
