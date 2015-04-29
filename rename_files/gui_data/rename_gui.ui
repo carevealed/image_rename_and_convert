@@ -222,7 +222,7 @@
         </property>
         <layout class="QVBoxLayout" name="verticalLayout">
          <item>
-          <widget class="QTreeWidget" name="treeWidget">
+          <widget class="QTreeWidget" name="tree_files">
            <column>
             <property name="text">
              <string>Project ID</string>
@@ -392,9 +392,8 @@
           </widget>
          </item>
         </layout>
-        <zorder>frameActions</zorder>
         <zorder>frame</zorder>
-        <zorder>treeWidget</zorder>
+        <zorder>tree_files</zorder>
        </widget>
       </item>
       <item>
