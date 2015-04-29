@@ -34,11 +34,12 @@ class Singleton(type):
         return cls._instance
 
 class NameRecord(object):
-    def __init__(self, files, queue, obj_prefix, obj_num, proj_prefix, proj_num, path=None, simple=True):
+    def __init__(self, files, queue, obj_prefix, obj_num, proj_prefix, proj_num, path=None, simple=True, included=True):
         self.queue = queue
         self.files = []
         for file in files.files:
             file['md5'] = self._calculate_md5(file['old'])
+            file['included'] = included
             self.files.append(file)
 
         self.project_id = proj_prefix + "_" + str(proj_num)
@@ -47,6 +48,7 @@ class NameRecord(object):
         self.project_id_number = proj_num
         self.object_id_prefix = obj_prefix
         self.object_id_number = obj_num
+        self.included = included
 
         # self.md5 = self._calculate_md5(original_name)
         self.isSimple = simple
