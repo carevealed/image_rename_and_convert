@@ -1,3 +1,4 @@
+import csv
 from enum import Enum, unique
 import os
 import sys
@@ -28,12 +29,18 @@ def is_valid_folder_name(response):
     pass
 
 
-
-# FIXME: Valid string isn't working at all
 def valid_str(key, keyname, kwargs):
+    """
+
+    Loops until a valid answer is received.
+    :param key:
+    :param keyname:
+    :param kwargs:
+    :return:
+    """
     valid = False
     while not valid:
-        if key in kwargs:
+        if key in kwargs.keys():
             if kwargs[key]:
                 if isinstance(kwargs[key], str):
                     print("{} {}".format("{}:".format(keyname), "[{}]".format(kwargs[key])), end="")
@@ -54,25 +61,26 @@ def valid_str(key, keyname, kwargs):
                 else:
                     valid = True
                     return kwargs[key]
+            # else:
+            #     print("DIDIN'T FIND IT")
+            # valid = True
 
-            valid = True
-        else:
-            print("{}".format(keyname), end="")
-            response = input(" :").strip()
-            if response:
-                if not isinstance(response, str):
-                    sys.stderr.write("This data must be made up of letters.\n")
-                    continue
-                if is_reponse_valid(response):
-                    # kwargs[key] = response
-                    valid = True
-                    return response
-                else:
-                    valid = False
-                    continue
+        print("{}".format(keyname), end="")
+        response = input(" :").strip()
+        if response:
+            if not isinstance(response, str):
+                sys.stderr.write("This data must be made up of letters.\n")
+                continue
+            if is_reponse_valid(response):
+                # kwargs[key] = response
+                valid = True
+                return response
             else:
                 valid = False
                 continue
+        else:
+            valid = False
+            continue
 
 def valid_int(key, keyname, kwargs):
     valid = False
@@ -123,22 +131,22 @@ def valid_int(key, keyname, kwargs):
 
 
 
-def update_information(kwargs):
+def update_information(settings):
 
     print("This script needs some information before it can run. Please enter or update the following information. \n"
           "If a value is already suggested, you can confirm by pressing return without entering any values. \n"
           "To quit at any point, type \"q\" or \"quit\" and press enter. ")
     if MODE == running_mode.DEBUG:
         print("\n***** DEBUG INFORMATION ***** ")
-        for keys,values in kwargs.items():
+        for keys,values in settings.items():
             print("{:<20}:{:<20}".format(keys, str(values)))
         print("***** DEBUG INFORMATION *****\n\n")
 
 
     valid = False
     while not valid:
-        if 'source' in kwargs:
-            print("Source: [{}]".format(kwargs['source']), end="")
+        if 'source' in settings:
+            print("Source: [{}]".format(settings['source']), end="")
             valid = True
         else:
             print("Source ", end="")
@@ -146,7 +154,7 @@ def update_information(kwargs):
         if response:
             if is_reponse_valid(response):
                 if os.path.isdir(response):
-                    kwargs['source'] = response
+                    settings['source'] = response
                     valid = True
                     print("Directory found")
                 else:
@@ -154,33 +162,46 @@ def update_information(kwargs):
                     valid = False
     valid = False
     while not valid:
-        if 'destination' in kwargs:
-            print("Destination: [{}]".format(kwargs['destination']), end="")
-            valid = True
-        else:
-            print("Destination ", end="")
+        if 'destination' in settings:
+            if settings['destination']:
+                print("Destination: [{}]".format(settings['destination']), end="")
+                valid = True
+                continue
+
+        # else:
+        print("Destination ", end="")
         response = input(" :").strip()
         if response:
             if is_reponse_valid(response):
                 if is_valid_folder_name(response):
-                    if not os.path.isdir(response):
+                    if not os.path.exists(response):
                         key = input("That folder does not exist. Do wish to create it? [Y]").lower()
                         if not key == "yes" and not key == "y" and not key == "":
                             valid = False
                             continue
                         else:
                             print("Okay\n")
-                            kwargs['destination'] = response
+                            os.makedirs(response)
+                            settings['destination'] = response
                             valid = True
+                    else:
+                        key = input("That folder already exists. Are you sure you want to use it? [Y]").lower()
+                        if not key == "yes" and not key == "y" and not key == "":
+                            valid = False
+                            continue
+                        settings['destination'] = response
+                        valid = True
+                        continue
+
                 else:
                     print("Directory not found. Please try again or type [q] or [quit] and press enter.")
                     valid = False
-    kwargs['object_id_prefix'] = valid_str('object_id_prefix', "Object ID MARC code", kwargs)
-    kwargs['object_id_start'] = valid_int('object_id_start', 'Object ID starting number', kwargs)
-    kwargs['project_id_prefix'] = valid_str('project_id_prefix', "Project ID MARC code", kwargs)
-    kwargs['project_id_start'] = valid_int('project_id_start', "Project ID starting number", kwargs)
+    settings['object_id_prefix'] = valid_str('object_id_prefix', "Object ID MARC code", settings)
+    settings['object_id_start'] = valid_int('object_id_start', 'Object ID starting number', settings)
+    settings['project_id_prefix'] = valid_str('project_id_prefix', "Project ID MARC code", settings)
+    settings['project_id_start'] = valid_int('project_id_start', "Project ID starting number", settings)
 
-    return kwargs
+    return settings
 
 
 def display_settings(kwargs):
@@ -196,7 +217,20 @@ def display_settings(kwargs):
     pass
 
 
-def start_cli(**kwargs):
+def generate_report(reporter, report_file_name):
+    records = reporter.get_last_job()
+    with open(report_file_name, 'w') as f:
+        csv_file = csv.writer(f)
+        csv_file.writerow(["#", "Original Name:", "New Name:", "MD5"])
+        # f.write(
+        #     "=============================================================================================================================================\n")
+        for index, record in enumerate(records):
+            # print(record)
+
+            csv_file.writerow([index + 1, record['source'], os.path.basename(record['destination']), record['md5']])
+
+
+def start_cli(**settings):
     source = None
     user = None
     object_id_prefix = None
@@ -208,23 +242,23 @@ def start_cli(**kwargs):
     while needs_more_info:
         needs_more_info = False
 
-        if 'source' in kwargs:
-            source = kwargs['source']
+        if 'source' in settings:
+            source = settings['source']
             if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
                 print("source: pass")
         else:
             needs_more_info = True
 
-        if 'object_id_prefix' in kwargs:
-            object_id_prefix = kwargs['object_id_prefix']
+        if 'object_id_prefix' in settings:
+            object_id_prefix = settings['object_id_prefix']
             if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
                 print("object_id_prefix: pass")
         else:
             needs_more_info = True
 
-        if 'object_id_start' in kwargs:
+        if 'object_id_start' in settings:
             try:
-                first_object_id = int(kwargs['object_id_start'])
+                first_object_id = int(settings['object_id_start'])
                 if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
                     print("object_id_start pass")
             except TypeError:
@@ -232,16 +266,16 @@ def start_cli(**kwargs):
         else:
             needs_more_info = True
 
-        if 'project_id_prefix' in kwargs:
-            proj_id_prefix = kwargs['project_id_prefix']
+        if 'project_id_prefix' in settings:
+            proj_id_prefix = settings['project_id_prefix']
             if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
                 print("project_id_prefix: pass")
         else:
             needs_more_info = True
 
-        if 'project_id_start' in kwargs:
+        if 'project_id_start' in settings:
             try:
-                first_project_id = int(kwargs['project_id_start'])
+                first_project_id = int(settings['project_id_start'])
                 if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
                     print("project_id_start: pass")
             except TypeError:
@@ -249,27 +283,27 @@ def start_cli(**kwargs):
         else:
             needs_more_info = True
 
-        if 'user' in kwargs:
-            user = kwargs['user']
+        if 'user' in settings:
+            user = settings['user']
             if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
                 print("user: pass")
 
-        if 'destination' in kwargs:
-            output_path = kwargs['destination']
+        if 'destination' in settings:
+            output_path = settings['destination']
             if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
                 print("destination: pass")
         else:
             needs_more_info = True
 
         if needs_more_info:
-            kwargs = update_information(kwargs)
+            settings = update_information(settings)
             continue
-        display_settings(kwargs)
+        display_settings(settings)
         while True:
             is_user_happy = input("Are these correct? [y]/n/q :")
             if is_user_happy.lower() == 'n' or is_user_happy.lower() == 'no':
                 needs_more_info = True
-                kwargs = update_information(kwargs)
+                settings = update_information(settings)
                 break
             elif is_user_happy.lower() == 'y' or is_user_happy.lower() == 'yes' or not is_user_happy:
                 needs_more_info = False
@@ -306,8 +340,9 @@ def start_cli(**kwargs):
 
 # go through all the jpegs found. if there is a tiff file with the same name,
 # add that file the queue instead of the jpeg, otherwise, add the jpeg
+
     for index, jpeg in enumerate(jpegs):
-        files_per_record = rename_files.renaming_model.record_bundle(object_id_prefix, index+first_object_id, path=output_path)
+        files_per_record = rename_files.renaming_model.record_bundle(object_id_prefix, index+first_object_id, path=settings['destination'])
         jpeg_name = os.path.splitext(os.path.basename(jpeg))[0]
         found_tiff = False
         # print(jpeg_name)
@@ -351,9 +386,13 @@ def start_cli(**kwargs):
         record = builder.execute_rename_from_queue_by_record(i)
         reporter.add_record(record)
 
+    print("Renaming Completed")
     # print(type(reporter))
-    reporter.show_current_records(object_id=object_id_prefix)
+    report_name = os.path.join(settings['destination'], "report.csv")
+    generate_report(reporter, report_name)
+    # reporter.show_current_records(object_id=object_id_prefix)
     reporter.close_database()
+    print("Renamed files files and report saved to {}".format(settings['destination']))
     # for queue in builder.queues:
     #     print(queue)
 
