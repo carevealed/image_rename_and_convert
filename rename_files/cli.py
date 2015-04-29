@@ -221,13 +221,13 @@ def generate_report(reporter, report_file_name):
     records = reporter.get_last_job()
     with open(report_file_name, 'w') as f:
         csv_file = csv.writer(f)
-        csv_file.writerow(["#", "Original Name:", "New Name:", "MD5"])
+        csv_file.writerow(["#", "Project ID", "Original Name:", "New Name:", "MD5"])
         # f.write(
         #     "=============================================================================================================================================\n")
         for index, record in enumerate(records):
             # print(record)
-
-            csv_file.writerow([index + 1, record['source'], os.path.basename(record['destination']), record['md5']])
+            project_id = (record['project_id_prefix'] + "_" + str(record['project_id_number']).zfill(6))
+            csv_file.writerow([index + 1, project_id , record['source'], os.path.basename(record['destination']), record['md5']])
 
 
 def start_cli(**settings):
@@ -235,7 +235,7 @@ def start_cli(**settings):
     user = None
     object_id_prefix = None
     first_object_id = 1
-    proj_id_prefix = "CAPS"
+    proj_id_prefix = "caps"
     first_project_id = 1
     output_path = None
     needs_more_info = True
