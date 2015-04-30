@@ -1,3 +1,4 @@
+import argparse
 from enum import Enum
 import os
 
@@ -17,17 +18,36 @@ MODE = running_mode.BUIDING
 
 class MainDialog(QDialog, Ui_Form):
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, folder=None):
         super(MainDialog, self).__init__(parent)
         self.setupUi(self)
 
         # NON-UI data members
         self.builder = renaming_model.RenameFactory()
 
+        if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
+            self.pushButton_test = QPushButton(self.frame)
+            self.pushButton_test.setAutoFillBackground(False)
+            self.pushButton_test.setFlat(False)
+            self.pushButton_test.setObjectName("pushButton_test")
+            self.pushButton_test.setText("Test")
+            self.gridLayout_2.addWidget(self.pushButton_test, 3, 1, 1, 2)
+            self.pushButton_test.clicked.connect(self._test)
+
+        if folder:
+            self.lineEdit_source.insert(folder)
+
         # self.pushButton_update.clicked.connect(self.buttonClicked)
         self.pushButton_sourceBrowse.clicked.connect(self.browse_source)
         self.pushButton_destinationBrowse.clicked.connect(self.browse_destination)
         self.pushButton_update.clicked.connect(self.update_click)
+
+    def _test(self):
+        print("Test")
+        # TODO: Create hidden column for each tree view item
+        for item in self.tree_files.selectedItems():
+            print(item.text(2))
+
 
 
     def load_source(self, folder_name):
@@ -139,8 +159,13 @@ class MainDialog(QDialog, Ui_Form):
                 print("Updating")
             self.load_files(source=self.lineEdit_source.text())
 
+def main(folder=None):
+    if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
+        print("Starting GUI with {}".format(folder))
+    app = QApplication(sys.argv)
+    form = MainDialog(folder=folder)
+    form.show()
+    app.exec_()
 
-app = QApplication(sys.argv)
-form = MainDialog()
-form.show()
-app.exec_()
+if __name__ == '__main__':
+    main()
