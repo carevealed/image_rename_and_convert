@@ -2,6 +2,7 @@ from enum import Enum, unique
 import filecmp
 import hashlib
 import os
+from os.path import expanduser
 import sqlite3
 import shutil
 import sys
@@ -154,6 +155,10 @@ class RenameFactory(object):
     def status(self):
         return self._status
 
+
+    def clear_queues(self):
+        self._queues = []
+
     def add_queue(self, files, obj_id_prefix, obj_id_num, proj_id_prefix, proj_id_num):
         if obj_id_prefix in self.object_ids:
             # print("found one")
@@ -205,6 +210,7 @@ class RenameFactory(object):
     def _do_the_renaming(self, record):
         if not isinstance(record, NameRecord):
             raise TypeError
+        record.set_Working()
         for file in record.files:
             new_path = os.path.split(file['new'])[0]
             if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
@@ -220,9 +226,10 @@ class RenameFactory(object):
             else:
                 sys.stderr.write("Failed!\n")
                 raise IOError("File {0} does not match {1]".format(file['old'], file['new']))
-
+        record.set_Done()
         # print("Done")
         return record
+
     def clear_queues(self):
         self._queues = []
 
@@ -378,7 +385,8 @@ class record_bundle(object):
         if path:
             self.path = path
         else:
-            self.path = None
+            raise ValueError("Needs a path")
+            # self.path = expanduser("~")
 
     def __str__(self):
         reply = ""
@@ -392,13 +400,13 @@ class record_bundle(object):
     def add_file(self, file_name, new_name=None):
         if not self._files:
             if new_name:
-                file_pair = dict({"old": file_name, "new": new_name})
+                file_pair = dict({"old": file_name, "new": os.path.join(self.path, new_name)})
             else:
                 file_pair = dict({"old": file_name, "new": self.generate_CAVPP_name(object_prefix=self.object_id_prefix, file_name=file_name, suffix="prsv")})
         else:
             self.complex = True
             if new_name:
-                file_pair = dict({"old": file_name, "new": new_name})
+                file_pair = dict({"old": file_name, "new": os.path.join(self.path, new_name)})
             else:
                 suffix = str(len(self._files)+1).zfill(4)+ "_presv"
                 file_pair = dict({"old": file_name, "new": self.generate_CAVPP_name(object_prefix=self.object_id_prefix, file_name=file_name, suffix=suffix)})
