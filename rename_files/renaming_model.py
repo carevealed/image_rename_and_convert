@@ -191,6 +191,12 @@ class RenameFactory(object):
         # TODO: execute_rename_from_queue()
 
         pass
+
+    def include_file(self, fileName, include=True):
+
+        for queue in self._queues:
+            print(type(queue.files))
+            print(queue.files)
         # self._do_the_renaming()
 
     def execute_rename_from_queue_by_record(self, record):
