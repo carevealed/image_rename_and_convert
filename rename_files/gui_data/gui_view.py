@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'rename_gui.ui'
 #
-# Created: Wed Apr 29 14:55:40 2015
+# Created: Wed Apr 29 17:20:25 2015
 #      by: pyside-uic 0.2.15 running on PySide 1.2.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -122,6 +122,7 @@ class Ui_Form(object):
         self.verticalLayout = QtGui.QVBoxLayout(self.frameFiles)
         self.verticalLayout.setObjectName("verticalLayout")
         self.tree_files = QtGui.QTreeWidget(self.frameFiles)
+        self.tree_files.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
         self.tree_files.setObjectName("tree_files")
         item_0 = QtGui.QTreeWidgetItem(self.tree_files)
         item_0 = QtGui.QTreeWidgetItem(self.tree_files)
@@ -142,11 +143,11 @@ class Ui_Form(object):
         self.pushButton_include = QtGui.QPushButton(self.frame)
         self.pushButton_include.setObjectName("pushButton_include")
         self.gridLayout_2.addWidget(self.pushButton_include, 1, 2, 1, 1)
-        self.pushButton_group = QtGui.QPushButton(self.frame)
-        self.pushButton_group.setAutoFillBackground(False)
-        self.pushButton_group.setFlat(False)
-        self.pushButton_group.setObjectName("pushButton_group")
-        self.gridLayout_2.addWidget(self.pushButton_group, 1, 1, 1, 1)
+        self.pushButton_test = QtGui.QPushButton(self.frame)
+        self.pushButton_test.setAutoFillBackground(False)
+        self.pushButton_test.setFlat(False)
+        self.pushButton_test.setObjectName("pushButton_group")
+        self.gridLayout_2.addWidget(self.pushButton_test, 1, 1, 1, 1)
         self.verticalLayout.addWidget(self.frame)
         self.verticalLayout_2.addWidget(self.frameFiles)
         self.frameActions = QtGui.QFrame(self.frameBackground)
@@ -226,7 +227,7 @@ class Ui_Form(object):
         self.tree_files.setSortingEnabled(__sortingEnabled)
         self.pushButton_update.setText(QtGui.QApplication.translate("Form", "Update", None, QtGui.QApplication.UnicodeUTF8))
         self.pushButton_include.setText(QtGui.QApplication.translate("Form", "Include/Exclude", None, QtGui.QApplication.UnicodeUTF8))
-        self.pushButton_group.setText(QtGui.QApplication.translate("Form", "Group/Ungroup", None, QtGui.QApplication.UnicodeUTF8))
+        self.pushButton_test.setText(QtGui.QApplication.translate("Form", "Group/Ungroup", None, QtGui.QApplication.UnicodeUTF8))
         self.checkBoxIncludeReport.setText(QtGui.QApplication.translate("Form", "Include Report", None, QtGui.QApplication.UnicodeUTF8))
         self.buttonRename.setText(QtGui.QApplication.translate("Form", "Rename", None, QtGui.QApplication.UnicodeUTF8))
 
