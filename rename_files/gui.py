@@ -24,6 +24,13 @@ class MainDialog(QDialog, Ui_Form):
 
         # NON-UI data members
         self.builder = renaming_model.RenameFactory()
+        self._source = ""
+        self._destination = ""
+        self._pid_marc = ""
+        self._pid_startNum = 0
+        self._oid_marc = ""
+        self._oid_startNum = 0
+        # self.styleSheet_invalidText =
 
         if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
             self.pushButton_test = QPushButton(self.frame)
@@ -38,15 +45,61 @@ class MainDialog(QDialog, Ui_Form):
             self.lineEdit_source.insert(folder)
 
         # self.pushButton_update.clicked.connect(self.buttonClicked)
+        self.lineEdit_destination.textChanged.connect(self._update_destination)
+        self.lineEdit_source.textChanged.connect(self._update_source)
+        self.lineEdit_OID_MARC.textChanged.connect(self._update_oid_marc)
+        self.lineEdit_OID_startNum.textChanged.connect(self._update_oid_startNum)
+        self.lineEdit_PID_prefix.textChanged.connect(self._update_pid_marc)
+        self.lineEdit_PID_startNum.textChanged.connect(self._update_pid_startNum)
+
         self.pushButton_sourceBrowse.clicked.connect(self.browse_source)
         self.pushButton_destinationBrowse.clicked.connect(self.browse_destination)
         self.pushButton_update.clicked.connect(self.update_click)
+        self.style_invalid = "QWidget { background-color: rgb(255, 150, 150); }"
+        self.style_valid = "QWidget { background-color: rgb(155, 255, 155); }"
+
+
 
     def _test(self):
         print("Test")
         # TODO: Create hidden column for each tree view item
         for item in self.tree_files.selectedItems():
             print(item.text(2))
+
+    def _update_source(self, new_source):
+        self._source = new_source
+        print(self._source)
+
+    def _update_destination(self, new_destination):
+        self._destination = new_destination
+        print(self._destination)
+        pass
+
+    def _update_pid_marc(self, new_marc):
+        print(new_marc)
+
+        pass
+
+    def _update_pid_startNum(self, new_number):
+        try:
+            # print(int(new_number))
+            self._pid_startNum = int(new_number)
+            self.lineEdit_PID_startNum.setStyleSheet(self.style_valid)
+        except ValueError:
+            self.lineEdit_PID_startNum.setStyleSheet(self.style_invalid)
+
+    def _update_oid_marc(self, new_marc):
+        print(new_marc)
+        pass
+
+    def _update_oid_startNum(self, new_number):
+        try:
+            # print(int(new_number))
+            self._oid_startNum = int(new_number)
+            self.lineEdit_OID_startNum.setStyleSheet(self.style_valid)
+        except ValueError:
+            self.lineEdit_OID_startNum.setStyleSheet(self.style_invalid)
+        pass
 
 
 
