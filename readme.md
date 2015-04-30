@@ -25,7 +25,7 @@ Option 1: Install binary (Wheel)
 
 1. Download the latest version from the releases section of the project's Github page 
 https://github.com/cavpp/rename_files/releases. Right click on the link to latest version that ends in .whl and copy the address.
-2. Open a terminal and type "sudo pip install" and paste in the link. 
+2. Open a terminal and type "sudo pip3 install" and paste in the link. 
     
     
     For example:
