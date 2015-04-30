@@ -102,6 +102,9 @@ def main():
                   project_id_start=args.project_id_start,
                   user=args.username)
 
+    elif args.gui and args.source:
+        import gui
+        gui.main(args.source)
     elif args.gui:
         sys.stderr.write("I'm truly sorry about this but the GUI version isn't ready yet.\n"
                          "Go tell Henry that you are disappointed with him.\n")
