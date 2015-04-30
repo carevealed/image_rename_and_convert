@@ -1,6 +1,7 @@
 import argparse
 from enum import Enum
 import os
+from renaming_controller import generate_report
 
 __author__ = 'California Audio Visual Preservation Project'
 from PySide.QtGui import *
@@ -16,6 +17,11 @@ class running_mode(Enum):
     BUIDING = 2
 MODE = running_mode.BUIDING
 
+
+class text_styles:
+    INVALID = "QWidget { background-color: rgb(255, 200, 200); }"
+    VALID = "QWidget { background-color: rgb(200, 255, 200); }"
+
 class MainDialog(QDialog, Ui_Form):
 
     def __init__(self, parent=None, folder=None):
@@ -26,80 +32,175 @@ class MainDialog(QDialog, Ui_Form):
         self.builder = renaming_model.RenameFactory()
         self._source = ""
         self._destination = ""
-        self._pid_marc = ""
+        self._pid_prefix = ""
         self._pid_startNum = 0
         self._oid_marc = ""
         self._oid_startNum = 0
-        # self.styleSheet_invalidText =
+        self.reporter = renaming_model.ReportFactory(username="asd")
+        self.reporter.initize_database()
 
+        # setup UI
+        # set a test button if debut or building mode is on
         if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
-            self.pushButton_test = QPushButton(self.frame)
+            self.pushButton_test = QPushButton(self.frameSetup)
             self.pushButton_test.setAutoFillBackground(False)
             self.pushButton_test.setFlat(False)
             self.pushButton_test.setObjectName("pushButton_test")
             self.pushButton_test.setText("Test")
-            self.gridLayout_2.addWidget(self.pushButton_test, 3, 1, 1, 2)
+            self.gridLayout.addWidget(self.pushButton_test, 2, 0, 3, 0)
             self.pushButton_test.clicked.connect(self._test)
 
         if folder:
             self.lineEdit_source.insert(folder)
 
-        # self.pushButton_update.clicked.connect(self.buttonClicked)
+        # setup signals and slots
         self.lineEdit_destination.textChanged.connect(self._update_destination)
+        self._update_destination(self.lineEdit_destination.text())
+
         self.lineEdit_source.textChanged.connect(self._update_source)
+        self._update_source(self.lineEdit_source.text())
+
         self.lineEdit_OID_MARC.textChanged.connect(self._update_oid_marc)
+        self._update_oid_marc(self.lineEdit_OID_MARC.text())
+
         self.lineEdit_OID_startNum.textChanged.connect(self._update_oid_startNum)
-        self.lineEdit_PID_prefix.textChanged.connect(self._update_pid_marc)
+        self._update_oid_startNum(self.lineEdit_OID_startNum.text())
+
+        self.lineEdit_PID_prefix.textChanged.connect(self._update_pid_prefix)
+        self._update_pid_prefix(self.lineEdit_PID_prefix.text())
+
         self.lineEdit_PID_startNum.textChanged.connect(self._update_pid_startNum)
+        self._update_pid_startNum(self.lineEdit_PID_startNum.text())
 
         self.pushButton_sourceBrowse.clicked.connect(self.browse_source)
         self.pushButton_destinationBrowse.clicked.connect(self.browse_destination)
+
         self.pushButton_update.clicked.connect(self.update_click)
-        self.style_invalid = "QWidget { background-color: rgb(255, 150, 150); }"
-        self.style_valid = "QWidget { background-color: rgb(155, 255, 155); }"
 
-
+        self.buttonRename.clicked.connect(self._copy_files)
 
     def _test(self):
-        print("Test")
+        # print(self.gridLayout.getItemPosition(self.pushButton_test.))
         # TODO: Create hidden column for each tree view item
+
+        self._update_data_status()
+        self._debug()
+
+    def _debug(self):
+        data_members = self.__dict__
+        print(type(data_members))
+        print("\n****** Attributes ******")
+        for key, value in data_members.items():
+            print("  {:30}: {}".format(key, value), )
+
+        print("\n****** DATA TREE Selected ******")
         for item in self.tree_files.selectedItems():
-            print(item.text(2))
+            print("  {}".format(item.text(2)))
+
+        print("\n****** DATA Queue ******")
+        for queue in self.builder.queues:
+            print(queue)
 
     def _update_source(self, new_source):
         self._source = new_source
-        print(self._source)
+        self._update_data_status()
 
     def _update_destination(self, new_destination):
         self._destination = new_destination
-        print(self._destination)
-        pass
+        self._update_data_status()
 
-    def _update_pid_marc(self, new_marc):
-        print(new_marc)
+    def _copy_files(self):
+        success = True
+        print("Copying the files")
 
-        pass
+        # FIXME: Find out why this only runs once!
+        for i in self.builder:
+            record = self.builder.execute_rename_from_queue_by_record(i)
+            self.reporter.add_record(record)
+        if self.checkBox_IncludeReport.isChecked():
+            print("Generating report")
+            generate_report(self.reporter, os.path.join(self._destination, "report.csv"))
+        print(success)
+    def _update_pid_prefix(self, new_prefix):
+        self._pid_prefix = new_prefix
+        self._update_data_status()
 
     def _update_pid_startNum(self, new_number):
+        if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
+            print("updating PID: {}".format(new_number))
         try:
-            # print(int(new_number))
             self._pid_startNum = int(new_number)
-            self.lineEdit_PID_startNum.setStyleSheet(self.style_valid)
+            self.lineEdit_PID_startNum.setStyleSheet(text_styles.VALID)
         except ValueError:
-            self.lineEdit_PID_startNum.setStyleSheet(self.style_invalid)
+            self.lineEdit_PID_startNum.setStyleSheet(text_styles.INVALID)
+            self._pid_startNum = None
+        self._update_data_status()
 
     def _update_oid_marc(self, new_marc):
-        print(new_marc)
-        pass
+        self._oid_marc = new_marc
+        self._update_data_status()
+
 
     def _update_oid_startNum(self, new_number):
         try:
-            # print(int(new_number))
             self._oid_startNum = int(new_number)
-            self.lineEdit_OID_startNum.setStyleSheet(self.style_valid)
+            self.lineEdit_OID_startNum.setStyleSheet(text_styles.VALID)
         except ValueError:
-            self.lineEdit_OID_startNum.setStyleSheet(self.style_invalid)
-        pass
+            self.lineEdit_OID_startNum.setStyleSheet(text_styles.INVALID)
+            self._oid_startNum = None
+        self._update_data_status()
+
+
+    def _update_data_status(self):
+
+        valid = True
+
+        # source
+        if os.path.exists(self._source):
+            self.lineEdit_source.setStyleSheet(text_styles.VALID)
+        else:
+            self.lineEdit_source.setStyleSheet(text_styles.INVALID)
+            valid = False
+
+        # destination
+        if os.path.exists(self._destination):
+            self.lineEdit_destination.setStyleSheet(text_styles.VALID)
+        else:
+            self.lineEdit_destination.setStyleSheet(text_styles.INVALID)
+            valid = False
+
+        # pid prefix
+        if self._pid_prefix == "":
+            self.lineEdit_PID_prefix.setStyleSheet(text_styles.INVALID)
+            valid = False
+        else:
+            self.lineEdit_PID_prefix.setStyleSheet(text_styles.VALID)
+
+        # OID MARC
+        if self._oid_marc == "":
+            self.lineEdit_OID_MARC.setStyleSheet(text_styles.INVALID)
+            valid = False
+        else:
+            self.lineEdit_OID_MARC.setStyleSheet(text_styles.VALID)
+        if not self._pid_startNum:
+            valid = False
+        if not self._oid_startNum:
+            valid = False
+
+        self.lineEdit_validStatus.clear()
+        if valid:
+            self.lineEdit_validStatus.insert("Valid")
+            self.lineEdit_validStatus.setStyleSheet(text_styles.VALID)
+            self.pushButton_update.setEnabled(True)
+        else:
+            self.lineEdit_validStatus.insert("Not Valid")
+            self.lineEdit_validStatus.setStyleSheet(text_styles.INVALID)
+            self.pushButton_update.setEnabled(False)
+
+    def closeEvent(self, *args, **kwargs):
+        if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
+            print("Closing Database")
+        self.reporter.close_database()
 
 
 
@@ -137,11 +238,8 @@ class MainDialog(QDialog, Ui_Form):
         jpegs = []
         records = []
 
-        object_id_prefix = "CAS"
-        first_object_id = 54
-        proj_id_prefix = "caps"
-        first_project_id = 43
-        destination = "/Volumes/CAVPPTestDrive/"
+
+        # destination = "/Volumes/CAVPPTestDrive/"
 
         newfile = ""
 
@@ -155,10 +253,10 @@ class MainDialog(QDialog, Ui_Form):
                 if os.path.splitext(file)[1] == '.jpg':
                     newfile = os.path.join(root, file)
                     jpegs.append(newfile)
-
+        self.builder.clear_queues()
 
         for index, jpeg in enumerate(jpegs):
-            files_per_record = renaming_model.record_bundle(object_id_prefix, index+first_object_id, path=destination)
+            files_per_record = renaming_model.record_bundle(self._oid_marc, index+self._oid_startNum, path=destination)
             jpeg_name = os.path.splitext(os.path.basename(jpeg))[0]
             found_tiff = False
             # print(jpeg_name)
@@ -171,10 +269,10 @@ class MainDialog(QDialog, Ui_Form):
             if not found_tiff:
                 files_per_record.add_file(jpeg)
             self.builder.add_queue(files_per_record,
-                              obj_id_prefix=object_id_prefix,
-                              obj_id_num=index + first_object_id,
-                              proj_id_prefix=proj_id_prefix,
-                              proj_id_num=index + first_project_id)
+                              obj_id_prefix=self._oid_marc,
+                              obj_id_num=index + self._oid_startNum,
+                              proj_id_prefix=self._pid_prefix,
+                              proj_id_num=index + self._pid_startNum)
 
         for queue in self.builder.queues:
             simple = "Simple"
@@ -210,7 +308,8 @@ class MainDialog(QDialog, Ui_Form):
         if os.path.isdir(self.lineEdit_source.text()):
             if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
                 print("Updating")
-            self.load_files(source=self.lineEdit_source.text())
+            self.load_files(source=self.lineEdit_source.text(), destination=self._destination)
+            self.buttonRename.setEnabled(True)
 
 def main(folder=None):
     if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
