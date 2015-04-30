@@ -198,7 +198,7 @@ def update_information(settings):
                     valid = False
     settings['object_id_prefix'] = valid_str('object_id_prefix', "Object ID MARC code", settings)
     settings['object_id_start'] = valid_int('object_id_start', 'Object ID starting number', settings)
-    settings['project_id_prefix'] = valid_str('project_id_prefix', "Project ID MARC code", settings)
+    settings['project_id_prefix'] = valid_str('project_id_prefix', "Project ID prefix code", settings)
     settings['project_id_start'] = valid_int('project_id_start', "Project ID starting number", settings)
 
     return settings
@@ -208,9 +208,9 @@ def display_settings(kwargs):
     print("*****************************************************************************************")
     print("Source Directory:                    {}".format(kwargs['source']))
     print("Destination Directory:               {}".format(kwargs['destination']))
-    print("Project Identifier MARC Identifier:  {}".format(kwargs['project_id_prefix']))
+    print("Project Identifier Prefix:           {}".format(kwargs['project_id_prefix']))
     print("Project Identifier Starting Number:  {}".format(kwargs['project_id_start']))
-    print("Object Identifier MARC Identifier:   {}".format(kwargs['object_id_prefix']))
+    print("Object Identifier MARC:              {}".format(kwargs['object_id_prefix']))
     print("Object Identifier Starting Number:   {}".format(kwargs['object_id_start']))
     print("User Name:                           {}".format(kwargs['user']))
     print("*****************************************************************************************")
