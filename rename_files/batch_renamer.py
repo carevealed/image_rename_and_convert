@@ -3,7 +3,10 @@ import argparse
 import sys
 import sqlite3
 from rename_files.cli import *
+from rename_files.gui import *
+# from rename_files import start_gui
 
+# import rename_files.gui
 
 def initial_setup():
     if os.path.exists("data.db"):
@@ -82,12 +85,6 @@ def main():
     # parser.
     args = parser.parse_args()
 
-    # print("SOURCE: {0}.".format(args.source))
-    # print("DESTINATION: {0}.".format(args.destination))
-    # print("MARC code for the institution: {0}.".format(args.object_id_prefix))
-    # print("username: {0}.".format(args.username))
-    # print("INTERACTIVE: {0}.".format(args.interactive))
-    # print("GUI: {0}.".format(args.gui))
 
     if args.source and not args.gui:
         print("Starting CLI mode")
@@ -103,8 +100,8 @@ def main():
                   user=args.username)
 
     elif args.gui and args.source:
-        import gui
-        gui.main(args.source)
+        print("Starting GUI mode with {}".format(args.source))
+        start_gui(folder=args.source)
     elif args.gui:
         sys.stderr.write("I'm truly sorry about this but the GUI version isn't ready yet.\n"
                          "Go tell Henry that you are disappointed with him.\n")
