@@ -1,15 +1,16 @@
-import argparse
-from enum import Enum
-import os
-from renaming_controller import generate_report
-
 __author__ = 'California Audio Visual Preservation Project'
 from PySide.QtGui import *
 from PySide.QtCore import *
-from gui_data import Ui_Form
+# from rename_files.gui_datafiles import Ui_Form
+from rename_files.gui_datafiles.gui_view import Ui_Form
+from rename_files.renaming_model import RenameFactory, ReportFactory, record_bundle
 from enum import Enum
-import renaming_model
 import sys
+import argparse
+from enum import Enum
+import os
+from rename_files.renaming_controller import generate_report
+
 
 class running_mode(Enum):
     NORMAL = 0
@@ -29,17 +30,34 @@ class MainDialog(QDialog, Ui_Form):
         self.setupUi(self)
 
         # NON-UI data members
-        self.builder = renaming_model.RenameFactory()
+        self.builder = RenameFactory()
         self._source = ""
         self._destination = ""
         self._pid_prefix = ""
         self._pid_startNum = 0
         self._oid_marc = ""
         self._oid_startNum = 0
-        self.reporter = renaming_model.ReportFactory(username="asd")
+        self.reporter = ReportFactory(username="asd")  # TODO: add Username input
         self.reporter.initize_database()
 
         # setup UI
+
+        # include a status bar
+        self.status_bar = QStatusBar()
+        self.status_bar.setStyleSheet("QWidget {border: 1px solid grey; border-radius: 3px; }")
+        self.gridLayout_3.addWidget(self.status_bar)
+        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.frameSetup.sizePolicy().hasHeightForWidth())
+        self._update_statusbar("Idle")
+
+        self.status_bar.setSizePolicy(sizePolicy)
+
+        # hide the first column in normal mode
+        if MODE == running_mode.NORMAL:
+            self.tree_files.hideColumn(0)
+
         # set a test button if debut or building mode is on
         if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
             self.pushButton_test = QPushButton(self.frameSetup)
@@ -52,6 +70,9 @@ class MainDialog(QDialog, Ui_Form):
 
         if folder:
             self.lineEdit_source.insert(folder)
+        if MODE == running_mode.BUIDING:
+            self.lineEdit_destination.insert("/Volumes/CAVPPTestDrive/test1")
+            self.lineEdit_OID_MARC.insert("c")
 
         # setup signals and slots
         self.lineEdit_destination.textChanged.connect(self._update_destination)
@@ -75,31 +96,43 @@ class MainDialog(QDialog, Ui_Form):
         self.pushButton_sourceBrowse.clicked.connect(self.browse_source)
         self.pushButton_destinationBrowse.clicked.connect(self.browse_destination)
 
+        self.pushButton_include.clicked.connect(self._include_selection)
+
+        self.pushButton_load_filles.clicked.connect(self._load_files_click)
         self.pushButton_update.clicked.connect(self.update_click)
 
         self.buttonRename.clicked.connect(self._copy_files)
 
+
+
     def _test(self):
         # print(self.gridLayout.getItemPosition(self.pushButton_test.))
-        # TODO: Create hidden column for each tree view item
 
         self._update_data_status()
         self._debug()
 
     def _debug(self):
         data_members = self.__dict__
-        print(type(data_members))
-        print("\n****** Attributes ******")
-        for key, value in data_members.items():
-            print("  {:30}: {}".format(key, value), )
+        # print(type(data_members))
+        # print("\n****** Attributes ******")
+        # for key, value in data_members.items():
+        #     print("  {:30}: {}".format(key, value), )
 
         print("\n****** DATA TREE Selected ******")
         for item in self.tree_files.selectedItems():
-            print("  {}".format(item.text(2)))
+            file_id = int(item.text(0))
+            # print("  {}".format(file_id))
+            print(self.builder.find_file(file_id))
 
-        print("\n****** DATA Queue ******")
-        for queue in self.builder.queues:
-            print(queue)
+        # print("\n****** DATA Queue ******")
+        # for queue in self.builder.queues:
+        #     print(queue)
+
+    def _load_files_click(self):
+        self.load_files(source=self.lineEdit_source.text(), destination=self._destination)
+
+    def _update_statusbar(self, message):
+        self.status_bar.showMessage("Status: {}".format(message))
 
     def _update_source(self, new_source):
         self._source = new_source
@@ -113,13 +146,16 @@ class MainDialog(QDialog, Ui_Form):
         success = True
         print("Copying the files")
 
-        # FIXME: Find out why this only runs once!
-        for i in self.builder:
+        for i in self.builder.queues:
             record = self.builder.execute_rename_from_queue_by_record(i)
+            # print(i.get_dict()['project id'])
+            self._update_statusbar("Copying {}".format(i.get_dict()['project id']))
             self.reporter.add_record(record)
         if self.checkBox_IncludeReport.isChecked():
-            print("Generating report")
-            generate_report(self.reporter, os.path.join(self._destination, "report.csv"))
+            # print("Generating report")
+            report = os.path.join(self._destination, "report.csv")
+            generate_report(self.reporter, report)
+            self._update_statusbar("Report generated to {}".format(report))
         print(success)
     def _update_pid_prefix(self, new_prefix):
         self._pid_prefix = new_prefix
@@ -191,11 +227,22 @@ class MainDialog(QDialog, Ui_Form):
         if valid:
             self.lineEdit_validStatus.insert("Valid")
             self.lineEdit_validStatus.setStyleSheet(text_styles.VALID)
+            self.pushButton_load_filles.setEnabled(True)
             self.pushButton_update.setEnabled(True)
         else:
             self.lineEdit_validStatus.insert("Not Valid")
             self.lineEdit_validStatus.setStyleSheet(text_styles.INVALID)
+            self.pushButton_load_filles.setEnabled(False)
+            self.buttonRename.setEnabled(False)
             self.pushButton_update.setEnabled(False)
+
+    def _include_selection(self):
+        for item in self.tree_files.selectedItems():
+            id = int(item.text(0))
+            print("Changing {}".format(id))
+            current_status = self.builder.find_file(id)['included']
+            self.builder.set_file_include(id, not current_status)
+        self.update_tree()
 
     def closeEvent(self, *args, **kwargs):
         if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
@@ -233,10 +280,46 @@ class MainDialog(QDialog, Ui_Form):
         if destination:
             self.load_destination(destination)
 
+    def update_tree(self):
+        records = []
+        self.tree_files.clear()
+        for queue in self.builder.queues:
+            simple = "Simple"
+            old_names = ""
+            new_names = ""
+            files = []
+            file_id = ""
+
+            if not queue.isSimple:
+                simple = "Complex"
+            record = QTreeWidgetItem(self.tree_files, ["", queue.project_id, simple])
+
+            for file in queue.files:
+                included = "Included"
+                if not file['included']:
+                    included = "Excluded"
+
+                if not queue.isSimple:
+                    files.append(QTreeWidgetItem(record, ["", "", file["old"], file['new'], included]))
+                old_names += os.path.basename(file['old']) + " "
+                new_names += os.path.basename(file['new']) + " "
+                file_id = file['id']
+            record.setText(0, str(file_id))
+            record.setText(3, old_names)
+            record.setText(4, new_names)
+            record.setText(6, queue.get_status())
+            if queue.isSimple:
+                included = "Included"
+                if not queue.files[0]['included']:
+                    included = "Excluded"
+                record.setText(5, included)
+
+            records.append(record)
+        self.tree_files.addTopLevelItems(records)
+
     def load_files(self, source, destination=None):
         tiffs = []
         jpegs = []
-        records = []
 
 
         # destination = "/Volumes/CAVPPTestDrive/"
@@ -256,7 +339,7 @@ class MainDialog(QDialog, Ui_Form):
         self.builder.clear_queues()
 
         for index, jpeg in enumerate(jpegs):
-            files_per_record = renaming_model.record_bundle(self._oid_marc, index+self._oid_startNum, path=destination)
+            files_per_record = record_bundle(self._oid_marc, index+self._oid_startNum, path=destination)
             jpeg_name = os.path.splitext(os.path.basename(jpeg))[0]
             found_tiff = False
             # print(jpeg_name)
@@ -273,45 +356,25 @@ class MainDialog(QDialog, Ui_Form):
                               obj_id_num=index + self._oid_startNum,
                               proj_id_prefix=self._pid_prefix,
                               proj_id_num=index + self._pid_startNum)
-
-        for queue in self.builder.queues:
-            simple = "Simple"
-            old_names = ""
-            new_names = ""
-            files = []
-
-            if not queue.isSimple:
-                simple = "Complex"
-            record = QTreeWidgetItem(self.tree_files, [queue.project_id, simple])
-            for file in queue.files:
-                included = "Included"
-                if not file['included']:
-                    included = "Excluded"
-
-                if not queue.isSimple:
-                    files.append(QTreeWidgetItem(record, ["", "", file["old"], file['new'], included]))
-                old_names += os.path.basename(file['old']) + " "
-                new_names += os.path.basename(file['new']) + " "
-            record.setText(2, old_names)
-            record.setText(3, new_names)
-            if queue.isSimple:
-                included = "Included"
-                if not queue.files[0]['included']:
-                    included = "Excluded"
-                record.setText(4, included)
-
-            records.append(record)
-
-        self.tree_files.addTopLevelItems(records)
+        self.buttonRename.setEnabled(True)
+        self.update_tree()
 
     def update_click(self):
         if os.path.isdir(self.lineEdit_source.text()):
             if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
-                print("Updating")
-            self.load_files(source=self.lineEdit_source.text(), destination=self._destination)
+                print("Updating tree")
+            self._update_statusbar("Updating")
+            self.builder.update(obj_marc=self._oid_marc,
+                                obj_start_num=self._oid_startNum,
+                                proj_prefix=self._pid_prefix,
+                                proj_start_num=self._pid_startNum,
+                                path=self._destination)
+            # self.load_files(source=self.lineEdit_source.text(), destination=self._destination)
+            self.update_tree()
             self.buttonRename.setEnabled(True)
+            self._update_statusbar("Updated")
 
-def main(folder=None):
+def start_gui(folder=None):
     if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
         print("Starting GUI with {}".format(folder))
     app = QApplication(sys.argv)
@@ -320,4 +383,4 @@ def main(folder=None):
     app.exec_()
 
 if __name__ == '__main__':
-    main()
+    start_gui()
