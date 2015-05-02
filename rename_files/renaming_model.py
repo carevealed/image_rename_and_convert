@@ -1,6 +1,7 @@
 from enum import Enum, unique
 import filecmp
 import hashlib
+from operator import itemgetter
 import os
 from os.path import expanduser
 import sqlite3
@@ -35,12 +36,18 @@ class Singleton(type):
         return cls._instance
 
 class NameRecord(object):
+    file_local_id = 0
     def __init__(self, files, queue, obj_prefix, obj_num, proj_prefix, proj_num, path=None, simple=True, included=True):
         self.queue = queue
         self.files = []
+
+        print("files: {}".format(files))
         for file in files.files:
+            file['id'] = self.file_local_id
+            NameRecord.file_local_id += 1
             file['md5'] = self._calculate_md5(file['old'])
             file['included'] = included
+
             self.files.append(file)
 
         self.project_id = proj_prefix + "_" + str(proj_num)
@@ -82,7 +89,13 @@ class NameRecord(object):
     #     self._status = RecordStatus.pending
         ## USE THIS IF NEED BE ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     def get_status(self):
-        return self._status
+        # print(self._status)
+        if self._status == RecordStatus.pending:
+            return "Ready"
+        if self._status == RecordStatus.working:
+            return "Working"
+        if self._status == RecordStatus.done:
+            return "Completed"
 
     def set_Pending(self):
         self._status = RecordStatus.pending
@@ -155,6 +168,43 @@ class RenameFactory(object):
     def status(self):
         return self._status
 
+    def update(self, proj_prefix, proj_start_num, obj_marc, obj_start_num, path):
+        print("updating builder")
+        print("proj_prefix: {}, proj_start_num: {}, obj_marc: {}, obj_start_num: {}".format(proj_prefix, proj_start_num, obj_marc, obj_start_num))
+        new_queues = []
+        # queues = )
+        NameRecord.file_local_id = 0
+        for index, old_queue in enumerate(sorted(self._queues, key=lambda x: x.queue)):
+            print("\nOld: ", end="")
+            print(old_queue)
+            included_files = []
+            excluded_files = []
+            files = record_bundle(object_id_prefix=obj_marc, object_id_number=obj_start_num+index, path=path)
+            for file in old_queue.files:
+                if file['included'] == True:
+                    files.add_file(file['old'])
+                else:
+                    excluded_files.append(file['old'])
+            # print("Included files:{}".format(included_files))
+            pass
+            new_queue = NameRecord(files=files,
+                                   queue=index,
+                                   obj_prefix=obj_marc,
+                                   obj_num=index+obj_start_num,
+                                   proj_prefix=proj_prefix,
+                                   proj_num=proj_start_num+index)
+
+            # print(type(old_queue))
+            # new_queue = NameRecord()({'group': old_queue['group'],
+            #                   'status': old_queue['status'],
+            #                   'project id': old_queue['project id']})
+            print("New: ", end="")
+            print(new_queue)
+            # TODO: reinsert new new into the old queue list
+
+
+        pass
+
 
     def clear_queues(self):
         self._queues = []
@@ -169,6 +219,15 @@ class RenameFactory(object):
 
         new_queue = NameRecord(files, len(self._queues), obj_prefix=obj_id_prefix, obj_num=obj_id_num, proj_prefix=proj_id_prefix, proj_num=proj_id_num)
         self._queues.append(new_queue)
+
+    def find_file(self, file_id):
+        # print("Finding file id #{}".format(file_id))
+        for queue in self._queues:
+            for file in queue.files:
+                # print(file)
+                if file['id'] == file_id:
+                    return file
+
 
     def remove_queue(self, file_name):
         temp_queues = []
@@ -197,12 +256,18 @@ class RenameFactory(object):
 
         pass
 
-    def include_file(self, fileName, include=True):
-
+    def set_file_include(self, file_id, include):
+        found_it = False;
         for queue in self._queues:
-            print(type(queue.files))
-            print(queue.files)
-        # self._do_the_renaming()
+            for file in queue.files:
+                # print(file)
+                if file['id'] == file_id:
+                    file['included'] = include
+                    found_it = True
+                    break
+            if found_it:
+                break
+
 
     def execute_rename_from_queue_by_record(self, record):
         return self._do_the_renaming(record)
@@ -351,6 +416,7 @@ class ReportFactory(metaclass=Singleton):
 
         self._database.commit()
         pass
+
 
     def show_current_records(self, object_id=None):
         if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
