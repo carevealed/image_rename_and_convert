@@ -41,7 +41,7 @@ class NameRecord(object):
         self.queue = queue
         self.files = []
 
-        print("files: {}".format(files))
+        # print("files: {}".format(files))
         for file in files.files:
             file['id'] = self.file_local_id
             NameRecord.file_local_id += 1
@@ -63,31 +63,6 @@ class NameRecord(object):
         self.complex_obj_group = None
         self._status = RecordStatus.pending
 
-
-        ## USE THIS IF NEED BE ****************************************************************************************************
-    # def __init__(self, original_name, queue, object_id, project_id, file_type=None, new_name=None, path=None, simple=True):
-    #     self.queue = queue
-    #     self.old_name = original_name
-    #
-    #     if not new_name:
-    #         if path:
-    #             newpath = path
-    #         else:
-    #             # newpath = os.path.abspath(os.path.join(os.path.split(original_name)[0],"../newfiles/")) # FIXME WRONG FOLDER!!! REALLY BAD!!!
-    #             newpath = '/Volumes/CAVPPTestDrive/test'
-    #         _new_name = object_id
-    #         if file_type:
-    #             _new_name += ("_" + file_type)
-    #         self.new_name = os.path.join(newpath, (_new_name + os.path.splitext(original_name)[1]))
-    #     else:
-    #         self.new_name = new_name
-    #     self.project_id = project_id
-    #     self.object_id = object_id
-    #     self.md5 = self._calculate_md5(original_name)
-    #     self.isSimple = simple
-    #     self.complex_obj_group = None
-    #     self._status = RecordStatus.pending
-        ## USE THIS IF NEED BE ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     def get_status(self):
         # print(self._status)
         if self._status == RecordStatus.pending:
@@ -115,7 +90,7 @@ class NameRecord(object):
         return md5.hexdigest()
 
     def __str__(self):
-        return str(self.get_dict())
+        return "data: " + str(self.get_dict())
 
     def get_dict(self):
         return {'queue': self.queue,
@@ -169,40 +144,58 @@ class RenameFactory(object):
         return self._status
 
     def update(self, proj_prefix, proj_start_num, obj_marc, obj_start_num, path):
-        print("updating builder")
-        print("proj_prefix: {}, proj_start_num: {}, obj_marc: {}, obj_start_num: {}".format(proj_prefix, proj_start_num, obj_marc, obj_start_num))
+        # print("updating builder")
+        # print("proj_prefix: {}, proj_start_num: {}, obj_marc: {}, obj_start_num: {}".format(proj_prefix, proj_start_num, obj_marc, obj_start_num))
         new_queues = []
         # queues = )
         NameRecord.file_local_id = 0
+        object_count = 0
+        queue_count = 0
         for index, old_queue in enumerate(sorted(self._queues, key=lambda x: x.queue)):
-            print("\nOld: ", end="")
-            print(old_queue)
+            # print("\nOld: ", end="")
+            # print(old_queue)
             included_files = []
             excluded_files = []
-            files = record_bundle(object_id_prefix=obj_marc, object_id_number=obj_start_num+index, path=path)
+            files = record_bundle(object_id_prefix=obj_marc, object_id_number=obj_start_num+object_count, path=path)
             for file in old_queue.files:
                 if file['included'] == True:
                     files.add_file(file['old'])
                 else:
                     excluded_files.append(file['old'])
             # print("Included files:{}".format(included_files))
-            pass
-            new_queue = NameRecord(files=files,
-                                   queue=index,
-                                   obj_prefix=obj_marc,
-                                   obj_num=index+obj_start_num,
-                                   proj_prefix=proj_prefix,
-                                   proj_num=proj_start_num+index)
 
-            # print(type(old_queue))
-            # new_queue = NameRecord()({'group': old_queue['group'],
-            #                   'status': old_queue['status'],
-            #                   'project id': old_queue['project id']})
-            print("New: ", end="")
-            print(new_queue)
-            # TODO: reinsert new new into the old queue list
+            if len(files) > 0:
+                new_queue = NameRecord(files=files,
+                                       queue=queue_count,
+                                       obj_prefix=obj_marc,
+                                       obj_num=object_count+obj_start_num,
+                                       proj_prefix=proj_prefix,
+                                       proj_num=proj_start_num+object_count)
+                queue_count += 1
+                object_count += 1
+                new_queues.append(new_queue)
+            else:
+                # print("excluded files size: {}".format(len(excluded_files)))
+                for excluded_file in excluded_files:
+                    file = record_bundle(path=path)
+                    file.add_file(excluded_file)
+                    new_queue = NameRecord(files=file,
+                                           queue=queue_count,
+                                           obj_prefix=obj_marc,
+                                           obj_num=object_count+obj_start_num,
+                                           proj_prefix=proj_prefix,
+                                           proj_num=proj_start_num+object_count,
+                                           included=False)
+
+                    queue_count += 1
+                    new_queues.append(new_queue)
 
 
+            # print("New: ", end="")
+            # print(new_queue)
+
+            # compaire the originals
+        self._queues = new_queues
         pass
 
 
@@ -277,6 +270,7 @@ class RenameFactory(object):
             raise TypeError
         record.set_Working()
         for file in record.files:
+
             new_path = os.path.split(file['new'])[0]
             if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
                 print("Copying {0} to {1}.".format(file['old'], new_path), end="")
@@ -409,6 +403,8 @@ class ReportFactory(metaclass=Singleton):
                                (self.current_batch, record.project_id_prefix, record.project_id_number, record.object_id_prefix, record.object_id_number))
         record_id = self._database.execute('SELECT LAST_INSERT_ROWID()').fetchone()['LAST_INSERT_ROWID()']
         for file in record.files:
+            if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
+                print("File: {}".format(file))
             self._database.execute('INSERT INTO files('
                                    'record_id, source, destination, md5, file_suffix, file_extension) '
                                    'VALUES(?,?,?,?,?,?)',
@@ -443,7 +439,8 @@ class ReportFactory(metaclass=Singleton):
 
 class record_bundle(object):
 
-    def __init__(self, object_id_prefix, object_id_number, path=None):
+    def __init__(self, object_id_prefix=None, object_id_number=None, path=None):
+
         self.object_id_prefix = object_id_prefix
         self.object_id_number = object_id_number
         self._files = []
@@ -459,6 +456,12 @@ class record_bundle(object):
         for file in self._files:
             reply += str(file)
         return reply
+
+    def __len__(self):
+        # print("len type: {}".format(type(len(self._files))))
+        # int(len(self._files))
+        return len(self._files)
+
     @property
     def files(self):
         return self._files
@@ -467,6 +470,8 @@ class record_bundle(object):
         if not self._files:
             if new_name:
                 file_pair = dict({"old": file_name, "new": os.path.join(self.path, new_name)})
+            elif not self.object_id_prefix:  # in other words, if the file is ignored
+                file_pair = dict({"old": file_name, "new": None})
             else:
                 file_pair = dict({"old": file_name, "new": self.generate_CAVPP_name(object_prefix=self.object_id_prefix, file_name=file_name, suffix="prsv")})
         else:
