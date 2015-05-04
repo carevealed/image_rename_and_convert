@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '/Users/lpsdesk/PycharmProjects/rename_files/rename_files/gui_datafiles/rename_gui.ui'
+# Form implementation generated from reading ui file '/Users/lpsdesk/PycharmProjects/rename_files/rename_files/gui_datafiles/rename.ui'
 #
-# Created: Fri May  1 17:49:47 2015
+# Created: Mon May  4 16:51:41 2015
 #      by: pyside-uic 0.2.15 running on PySide 1.2.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -226,12 +226,6 @@ class Ui_Form(object):
         self.tree_files = QtGui.QTreeWidget(self.frame_3)
         self.tree_files.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
         self.tree_files.setObjectName("tree_files")
-        item_0 = QtGui.QTreeWidgetItem(self.tree_files)
-        item_0 = QtGui.QTreeWidgetItem(self.tree_files)
-        item_1 = QtGui.QTreeWidgetItem(item_0)
-        item_1 = QtGui.QTreeWidgetItem(item_0)
-        item_1 = QtGui.QTreeWidgetItem(item_0)
-        item_1 = QtGui.QTreeWidgetItem(item_0)
         self.tree_files.header().setVisible(True)
         self.gridLayout_5.addWidget(self.tree_files, 0, 0, 1, 2)
         self.pushButton_group = QtGui.QPushButton(self.frame_3)
@@ -315,31 +309,6 @@ class Ui_Form(object):
         self.tree_files.headerItem().setText(4, QtGui.QApplication.translate("Form", "New Name", None, QtGui.QApplication.UnicodeUTF8))
         self.tree_files.headerItem().setText(5, QtGui.QApplication.translate("Form", "Included/Excluded", None, QtGui.QApplication.UnicodeUTF8))
         self.tree_files.headerItem().setText(6, QtGui.QApplication.translate("Form", "Status", None, QtGui.QApplication.UnicodeUTF8))
-        __sortingEnabled = self.tree_files.isSortingEnabled()
-        self.tree_files.setSortingEnabled(False)
-        self.tree_files.topLevelItem(0).setText(1, QtGui.QApplication.translate("Form", "CAPS1010", None, QtGui.QApplication.UnicodeUTF8))
-        self.tree_files.topLevelItem(0).setText(2, QtGui.QApplication.translate("Form", "Simple", None, QtGui.QApplication.UnicodeUTF8))
-        self.tree_files.topLevelItem(0).setText(3, QtGui.QApplication.translate("Form", "ana109.tif", None, QtGui.QApplication.UnicodeUTF8))
-        self.tree_files.topLevelItem(0).setText(4, QtGui.QApplication.translate("Form", "ANA_00181_prsv.jpg", None, QtGui.QApplication.UnicodeUTF8))
-        self.tree_files.topLevelItem(0).setText(5, QtGui.QApplication.translate("Form", "Included", None, QtGui.QApplication.UnicodeUTF8))
-        self.tree_files.topLevelItem(1).setText(1, QtGui.QApplication.translate("Form", "CAPS1011", None, QtGui.QApplication.UnicodeUTF8))
-        self.tree_files.topLevelItem(1).setText(2, QtGui.QApplication.translate("Form", "Complex", None, QtGui.QApplication.UnicodeUTF8))
-        self.tree_files.topLevelItem(1).setText(3, QtGui.QApplication.translate("Form", "ana110.tif .. ana113.tif", None, QtGui.QApplication.UnicodeUTF8))
-        self.tree_files.topLevelItem(1).setText(4, QtGui.QApplication.translate("Form", "ANA_00182_001_prsv.jpg .. ANA_00182_004_prsv.jpg", None, QtGui.QApplication.UnicodeUTF8))
-        self.tree_files.topLevelItem(1).setText(5, QtGui.QApplication.translate("Form", "Included", None, QtGui.QApplication.UnicodeUTF8))
-        self.tree_files.topLevelItem(1).child(0).setText(3, QtGui.QApplication.translate("Form", "ana110.tif", None, QtGui.QApplication.UnicodeUTF8))
-        self.tree_files.topLevelItem(1).child(0).setText(4, QtGui.QApplication.translate("Form", "ANA_00182_001_prsv.jpg", None, QtGui.QApplication.UnicodeUTF8))
-        self.tree_files.topLevelItem(1).child(0).setText(5, QtGui.QApplication.translate("Form", "Included", None, QtGui.QApplication.UnicodeUTF8))
-        self.tree_files.topLevelItem(1).child(1).setText(3, QtGui.QApplication.translate("Form", "ana111.tif", None, QtGui.QApplication.UnicodeUTF8))
-        self.tree_files.topLevelItem(1).child(1).setText(4, QtGui.QApplication.translate("Form", "ANA_00182_002_prsv.jpg", None, QtGui.QApplication.UnicodeUTF8))
-        self.tree_files.topLevelItem(1).child(1).setText(5, QtGui.QApplication.translate("Form", "Included", None, QtGui.QApplication.UnicodeUTF8))
-        self.tree_files.topLevelItem(1).child(2).setText(3, QtGui.QApplication.translate("Form", "ana112.tif", None, QtGui.QApplication.UnicodeUTF8))
-        self.tree_files.topLevelItem(1).child(2).setText(4, QtGui.QApplication.translate("Form", "ANA_00182_003_prsv.jpg", None, QtGui.QApplication.UnicodeUTF8))
-        self.tree_files.topLevelItem(1).child(2).setText(5, QtGui.QApplication.translate("Form", "Included", None, QtGui.QApplication.UnicodeUTF8))
-        self.tree_files.topLevelItem(1).child(3).setText(3, QtGui.QApplication.translate("Form", "ana113.tif", None, QtGui.QApplication.UnicodeUTF8))
-        self.tree_files.topLevelItem(1).child(3).setText(4, QtGui.QApplication.translate("Form", "ANA_00182_004_prsv.jpg", None, QtGui.QApplication.UnicodeUTF8))
-        self.tree_files.topLevelItem(1).child(3).setText(5, QtGui.QApplication.translate("Form", "Included", None, QtGui.QApplication.UnicodeUTF8))
-        self.tree_files.setSortingEnabled(__sortingEnabled)
         self.pushButton_group.setText(QtGui.QApplication.translate("Form", "Group/Ungroup", None, QtGui.QApplication.UnicodeUTF8))
         self.pushButton_update.setText(QtGui.QApplication.translate("Form", "Update", None, QtGui.QApplication.UnicodeUTF8))
         self.checkBox_IncludeReport.setText(QtGui.QApplication.translate("Form", "Include Report", None, QtGui.QApplication.UnicodeUTF8))
