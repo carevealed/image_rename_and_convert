@@ -81,7 +81,7 @@ def main():
 
     parser.add_argument('-u', '--username', type=str, help="Identify the user")
     # parser.add_argument('-i', '--interactive', action='store_true', help="Interactive mode")
-    parser.add_argument('-g', '--gui', action='store_true', help="Graphical User Interface mode. Not yet implemented.")
+    parser.add_argument('-g', '--gui', action='store_true', help="Graphical User Interface mode. EXPERIMENTAL!")
     # parser.
     args = parser.parse_args()
 
@@ -103,8 +103,9 @@ def main():
         print("Starting GUI mode with {}".format(args.source))
         start_gui(folder=args.source)
     elif args.gui:
-        sys.stderr.write("I'm truly sorry about this but the GUI version isn't ready yet.\n"
-                         "Go tell Henry that you are disappointed with him.\n")
+        print("Starting GUI mode")
+        start_gui(folder=args.source)
+
     else:
         print(parser.print_help())
 
