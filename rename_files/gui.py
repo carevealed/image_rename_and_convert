@@ -2,7 +2,7 @@ __author__ = 'California Audio Visual Preservation Project'
 from PySide.QtGui import *
 from PySide.QtCore import *
 # from rename_files.gui_datafiles import Ui_Form
-from rename_files.gui_datafiles.gui_view import Ui_Form
+from rename_files.gui_datafiles.rename_gui import Ui_Form
 from rename_files.renaming_model import RenameFactory, ReportFactory, record_bundle
 from enum import Enum
 import sys
@@ -16,7 +16,7 @@ class running_mode(Enum):
     NORMAL = 0
     DEBUG = 1
     BUIDING = 2
-MODE = running_mode.BUIDING
+MODE = running_mode.NORMAL
 
 
 class text_styles:
@@ -124,9 +124,9 @@ class MainDialog(QDialog, Ui_Form):
             # print("  {}".format(file_id))
             print(self.builder.find_file(file_id))
 
-        # print("\n****** DATA Queue ******")
-        # for queue in self.builder.queues:
-        #     print(queue)
+        print("\n****** DATA Queue ******")
+        for queue in self.builder.queues:
+            print(queue)
 
     def _load_files_click(self):
         self.load_files(source=self.lineEdit_source.text(), destination=self._destination)
@@ -144,19 +144,29 @@ class MainDialog(QDialog, Ui_Form):
 
     def _copy_files(self):
         success = True
-        print("Copying the files")
+        msg_box = QMessageBox()
 
+        # print("Copying the files")
         for i in self.builder.queues:
-            record = self.builder.execute_rename_from_queue_by_record(i)
-            # print(i.get_dict()['project id'])
-            self._update_statusbar("Copying {}".format(i.get_dict()['project id']))
-            self.reporter.add_record(record)
+            if i.included:
+                record = self.builder.execute_rename_from_queue_by_record(i)
+                # print(i.get_dict()['project id'])
+                self._update_statusbar("Copied {}".format(i.get_dict()['project id']))
+                self.reporter.add_record(record)
+
         if self.checkBox_IncludeReport.isChecked():
             # print("Generating report")
             report = os.path.join(self._destination, "report.csv")
+            if os.path.exists(report):
+                os.remove(report)
             generate_report(self.reporter, report)
             self._update_statusbar("Report generated to {}".format(report))
-        print(success)
+            msg_box.setText("All files and a report have been successfully saved to {}".format(self._destination))
+        else:
+            msg_box.setText("All files have been successfully saved to {}".format(self._destination))
+        msg_box.exec_()
+        if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
+            print(success)
     def _update_pid_prefix(self, new_prefix):
         self._pid_prefix = new_prefix
         self._update_data_status()
@@ -239,7 +249,7 @@ class MainDialog(QDialog, Ui_Form):
     def _include_selection(self):
         for item in self.tree_files.selectedItems():
             id = int(item.text(0))
-            print("Changing {}".format(id))
+            # print("Changing {}".format(id))
             current_status = self.builder.find_file(id)['included']
             self.builder.set_file_include(id, not current_status)
         self.update_tree()
@@ -283,6 +293,11 @@ class MainDialog(QDialog, Ui_Form):
     def update_tree(self):
         records = []
         self.tree_files.clear()
+        self.builder.update(obj_marc=self._oid_marc,
+                    obj_start_num=self._oid_startNum,
+                    proj_prefix=self._pid_prefix,
+                    proj_start_num=self._pid_startNum,
+                    path=self._destination)
         for queue in self.builder.queues:
             simple = "Simple"
             old_names = ""
@@ -298,7 +313,7 @@ class MainDialog(QDialog, Ui_Form):
                 included = "Included"
                 if not file['included']:
                     included = "Excluded"
-
+                    file['new'] = ""
                 if not queue.isSimple:
                     files.append(QTreeWidgetItem(record, ["", "", file["old"], file['new'], included]))
                 old_names += os.path.basename(file['old']) + " "
@@ -308,11 +323,12 @@ class MainDialog(QDialog, Ui_Form):
             record.setText(3, old_names)
             record.setText(4, new_names)
             record.setText(6, queue.get_status())
-            if queue.isSimple:
-                included = "Included"
-                if not queue.files[0]['included']:
-                    included = "Excluded"
-                record.setText(5, included)
+            if queue.files:
+                if queue.isSimple:
+                    included = "Included"
+                    if not queue.files[0]['included']:
+                        included = "Excluded"
+                    record.setText(5, included)
 
             records.append(record)
         self.tree_files.addTopLevelItems(records)
@@ -369,7 +385,7 @@ class MainDialog(QDialog, Ui_Form):
                                 proj_prefix=self._pid_prefix,
                                 proj_start_num=self._pid_startNum,
                                 path=self._destination)
-            # self.load_files(source=self.lineEdit_source.text(), destination=self._destination)
+
             self.update_tree()
             self.buttonRename.setEnabled(True)
             self._update_statusbar("Updated")
@@ -381,6 +397,8 @@ def start_gui(folder=None):
     form = MainDialog(folder=folder)
     form.show()
     app.exec_()
+
+
 
 if __name__ == '__main__':
     start_gui()
