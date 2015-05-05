@@ -69,5 +69,9 @@ Option 2: From source using Setuptools
 2. Follow the instructions
 3. After the files are renamed to the new location, you will also find a report in the form of a CSV file in the same folder as the renamed files.
 
+### Graphical User Interface:
+
+1. In a terminal window type "rename -g ".
+
 ## Credits:
 * Henry Borchers
