@@ -1,7 +1,7 @@
 __author__ = 'California Audio Visual Preservation Project'
 from PySide.QtGui import *
 from PySide.QtCore import *
-# from rename_files.gui_datafiles import Ui_Form
+from rename_files.gui_datafiles.report_gui import Ui_dlg_report
 from rename_files.gui_datafiles.rename_gui import Ui_Form
 from rename_files.renaming_model import RenameFactory, ReportFactory, record_bundle
 from enum import Enum
@@ -107,7 +107,13 @@ class MainDialog(QDialog, Ui_Form):
 
     def _test(self):
         # print(self.gridLayout.getItemPosition(self.pushButton_test.))
-
+        self.report = QDialog(self)
+        reportUi = ReportDialog(jobNumber=4, parent=self)
+        if reportUi.exec_():
+            self.report.show()
+        # reportUi.setupUi(self.report)
+        if reportUi.exec_():
+            self.report.show()
         self._update_data_status()
         self._debug()
 
@@ -165,6 +171,9 @@ class MainDialog(QDialog, Ui_Form):
         else:
             msg_box.setText("All files have been successfully saved to {}".format(self._destination))
         msg_box.exec_()
+        reportUi = ReportDialog(jobNumber=self.reporter.current_batch)
+        if reportUi.exec_():
+            reportUi.show()
         if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
             print(success)
     def _update_pid_prefix(self, new_prefix):
@@ -389,6 +398,35 @@ class MainDialog(QDialog, Ui_Form):
             self.update_tree()
             self.buttonRename.setEnabled(True)
             self._update_statusbar("Updated")
+
+class ReportDialog(QDialog, Ui_dlg_report):
+
+    def __init__(self, jobNumber, parent=None):
+        super(ReportDialog, self).__init__(parent)
+        self.setupUi(self)
+        self.job_number = jobNumber
+        self.job_record = None
+
+        self.database = ReportFactory()
+
+        self.load_data()
+
+
+
+    def load_data(self):
+        self.job_record = self.database.get_job(self.job_number)
+        # self.tableWidget.setEnabled(False)
+        self.tableWidget.setRowCount(len(self.job_record))
+        for row, record in enumerate(self.job_record):
+            project_id = record['project_id_prefix'] + "_" + str(record['project_id_number']).zfill(5)
+            object_id = record['object_id_prefix'] + "_" + str(record['object_id_number']).zfill(5)
+
+            self.tableWidget.setItem(row, 0, QTableWidgetItem(project_id))
+            self.tableWidget.setItem(row, 1, QTableWidgetItem(object_id))
+            self.tableWidget.setItem(row, 2, QTableWidgetItem(record['source']))
+            self.tableWidget.setItem(row, 3, QTableWidgetItem(record['destination']))
+            self.tableWidget.setItem(row, 4, QTableWidgetItem(record['md5']))
+
 
 def start_gui(folder=None):
     if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
