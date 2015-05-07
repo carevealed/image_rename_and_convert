@@ -56,6 +56,7 @@ class NameRecord(object):
         self.project_id_number = proj_num
         self.object_id_prefix = obj_prefix
         self.object_id_number = obj_num
+        self.ia_url = None
         self.included = included
 
         # self.md5 = self._calculate_md5(original_name)
@@ -398,9 +399,9 @@ class ReportFactory(metaclass=Singleton):
         # NEW WAY
 
         self._database.execute('INSERT INTO records('
-                               'job_id, project_id_prefix, project_id_number, object_id_prefix, object_id_number) '
-                               'VALUES(?,?,?,?,?)',
-                               (self.current_batch, record.project_id_prefix, record.project_id_number, record.object_id_prefix, record.object_id_number))
+                               'job_id, project_id_prefix, project_id_number, object_id_prefix, object_id_number, ia_url) '
+                               'VALUES(?,?,?,?,?,?)',
+                               (self.current_batch, record.project_id_prefix, record.project_id_number, record.object_id_prefix, record.object_id_number, record.ia_url))
         record_id = self._database.execute('SELECT LAST_INSERT_ROWID()').fetchone()['LAST_INSERT_ROWID()']
         for file in record.files:
             if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
@@ -429,7 +430,7 @@ class ReportFactory(metaclass=Singleton):
         self._database.close()
 
     def get_last_job(self):
-        results = self._database.execute('SELECT source, destination, md5, project_id_prefix, project_id_number, object_id_prefix, object_id_number '
+        results = self._database.execute('SELECT source, destination, md5, project_id_prefix, project_id_number, object_id_prefix, object_id_number, '
                                          'FROM jobs '
                                          'JOIN records ON jobs.job_id=records.job_id '
                                          'JOIN files ON records.record_id=files.record_id '
