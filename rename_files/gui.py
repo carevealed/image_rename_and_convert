@@ -425,7 +425,8 @@ class ReportDialog(QDialog, Ui_dlg_report):
             self.tableWidget.setItem(row, 1, QTableWidgetItem(object_id))
             self.tableWidget.setItem(row, 2, QTableWidgetItem(record['source']))
             self.tableWidget.setItem(row, 3, QTableWidgetItem(record['destination']))
-            self.tableWidget.setItem(row, 4, QTableWidgetItem(record['md5']))
+            self.tableWidget.setItem(row, 4, QTableWidgetItem(record['ia_url']))
+            self.tableWidget.setItem(row, 5, QTableWidgetItem(record['md5']))
 
 
 def start_gui(folder=None):

@@ -56,7 +56,7 @@ class NameRecord(object):
         self.project_id_number = proj_num
         self.object_id_prefix = obj_prefix
         self.object_id_number = obj_num
-        self.ia_url = None
+        self.ia_url = "https://archive.org/details/" + obj_prefix + "_" + str(obj_num).zfill(6)
         self.included = included
 
         # self.md5 = self._calculate_md5(original_name)
@@ -430,7 +430,7 @@ class ReportFactory(metaclass=Singleton):
         self._database.close()
 
     def get_last_job(self):
-        results = self._database.execute('SELECT source, destination, md5, project_id_prefix, project_id_number, object_id_prefix, object_id_number, '
+        results = self._database.execute('SELECT source, destination, md5, project_id_prefix, project_id_number, object_id_prefix, object_id_number, ia_url '
                                          'FROM jobs '
                                          'JOIN records ON jobs.job_id=records.job_id '
                                          'JOIN files ON records.record_id=files.record_id '
@@ -438,7 +438,7 @@ class ReportFactory(metaclass=Singleton):
         return results.fetchall()
 
     def get_job(self, jobNumber):
-        results = self._database.execute('SELECT source, destination, md5, project_id_prefix, project_id_number, object_id_prefix, object_id_number '
+        results = self._database.execute('SELECT source, destination, md5, project_id_prefix, project_id_number, object_id_prefix, object_id_number, ia_url '
                                          'FROM jobs '
                                          'JOIN records ON jobs.job_id=records.job_id '
                                          'JOIN files ON records.record_id=files.record_id '
