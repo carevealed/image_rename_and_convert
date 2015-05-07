@@ -7,11 +7,12 @@ from rename_files.gui import *
 # from rename_files import start_gui
 
 # import rename_files.gui
+datafile = "data.db"
 
 def initial_setup():
-    if os.path.exists("data.db"):
-        print("found it in {}", os.path.abspath("data.db"))
-        test1 = sqlite3.connect('data.db')
+    if os.path.exists(datafile):
+        print("found it in {}", os.path.abspath(datafile))
+        test1 = sqlite3.connect(datafile)
         try:
             test1.execute("SELECT * FROM jobs JOIN records ON jobs.job_id=records.job_id JOIN files ON records.record_id=files.record_id")
         except sqlite3.OperationalError:
@@ -37,6 +38,7 @@ def initial_setup():
                                   'project_id_number INTEGER,'
                                   'object_id_prefix VARCHAR(10),'
                                   'object_id_number INTERGER,'
+                                  'ia_url VARCHAR(512),'
                                   'FOREIGN KEY(job_id) REFERENCES jobs(job_id));')
 
                     # files table
@@ -65,9 +67,36 @@ def initial_setup():
         print("Nope")
 
 
+def remove_database():
+    print("Cleaning up database.")
+    if os.path.exists(datafile):
+        print("{} found".format(datafile))
+        valid_response = False
+        while not valid_response:
+            response = input("Are you sure you want to remove it? y/[n]")
+            if response.lower() == 'y' or response.lower() == 'yes':
+                valid_response = True
+                print("Okay. Deleting {}".format(datafile))
+                os.remove(datafile)
+                if os.path.exists(datafile):
+                    sys.stderr.write("Error, Unable to remove file.")
+                    quit()
+                else:
+                    print("Done")
+                print("Cleaned")
+            elif response.lower() == 'n' or response.lower() == 'no' or response.lower() == '':
+                valid_response = True
+                print("Okay. Canceling.")
+            else:
+                print("Not a valid answer. Please try again\n")
+
+        # if confirm:
+
+    print("Done.")
+    pass
+
 
 def main():
-    initial_setup()
     parser = argparse.ArgumentParser(description="Renamer")
     parser.add_argument('-s', '--source', type=str, help="The source")
     parser.add_argument('-d', '--destination', type=str, help="Destination")
@@ -82,9 +111,15 @@ def main():
     parser.add_argument('-u', '--username', type=str, help="Identify the user")
     # parser.add_argument('-i', '--interactive', action='store_true', help="Interactive mode")
     parser.add_argument('-g', '--gui', action='store_true', help="Graphical User Interface mode. EXPERIMENTAL!")
+    parser.add_argument('--cleanup', action='store_true', help="Deletes stored data.")
     # parser.
     args = parser.parse_args()
 
+    if args.cleanup:
+
+        remove_database()
+        quit()
+    initial_setup()
 
     if args.source and not args.gui:
         print("Starting CLI mode")
