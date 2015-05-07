@@ -497,7 +497,7 @@ class record_bundle(object):
     def generate_CAVPP_name(self, object_prefix, file_name, suffix):
         # path = os.path.split(file_name)[0]
         extension = os.path.splitext(file_name)[1]
-        new_name = object_prefix + "_" + str(self.object_id_number).zfill(5) +"_" + suffix + extension
+        new_name = object_prefix + "_" + str(self.object_id_number).zfill(6) +"_" + suffix + extension
         if self.path:
             new_name = os.path.join(self.path, new_name)
         return new_name
