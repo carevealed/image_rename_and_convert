@@ -418,8 +418,8 @@ class ReportDialog(QDialog, Ui_dlg_report):
         # self.tableWidget.setEnabled(False)
         self.tableWidget.setRowCount(len(self.job_record))
         for row, record in enumerate(self.job_record):
-            project_id = record['project_id_prefix'] + "_" + str(record['project_id_number']).zfill(5)
-            object_id = record['object_id_prefix'] + "_" + str(record['object_id_number']).zfill(5)
+            project_id = record['project_id_prefix'] + "_" + str(record['project_id_number']).zfill(6)
+            object_id = record['object_id_prefix'] + "_" + str(record['object_id_number']).zfill(6)
 
             self.tableWidget.setItem(row, 0, QTableWidgetItem(project_id))
             self.tableWidget.setItem(row, 1, QTableWidgetItem(object_id))
