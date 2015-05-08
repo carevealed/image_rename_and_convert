@@ -1,9 +1,9 @@
 __author__ = 'California Audio Visual Preservation Project'
 from PySide.QtGui import *
 from PySide.QtCore import *
-from rename_files.gui_datafiles.report_gui import Ui_dlg_report
-from rename_files.gui_datafiles.rename_gui import Ui_Form
+from PIL import Image, ImageQt
 from rename_files.renaming_model import RenameFactory, ReportFactory, record_bundle
+from rename_files.gui_datafiles.report_gui import Ui_dlg_report
 from enum import Enum
 import sys
 import argparse
@@ -16,7 +16,14 @@ class running_mode(Enum):
     NORMAL = 0
     DEBUG = 1
     BUIDING = 2
+    TESTING = 3
 MODE = running_mode.NORMAL
+
+if not MODE == running_mode.TESTING:
+    from rename_files.gui_datafiles.rename_gui import Ui_Form
+
+if MODE == running_mode.TESTING:
+    from rename_files.gui_datafiles.renameTest_gui import Ui_Form
 
 
 class text_styles:
@@ -31,6 +38,7 @@ class MainDialog(QDialog, Ui_Form):
 
         # NON-UI data members
         self.builder = RenameFactory()
+        self.showPreview = True
         self._source = ""
         self._destination = ""
         self._pid_prefix = ""
@@ -59,7 +67,7 @@ class MainDialog(QDialog, Ui_Form):
             self.tree_files.hideColumn(0)
 
         # set a test button if debut or building mode is on
-        if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
+        if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING or MODE == running_mode.TESTING:
             self.pushButton_test = QPushButton(self.frameSetup)
             self.pushButton_test.setAutoFillBackground(False)
             self.pushButton_test.setFlat(False)
@@ -103,19 +111,59 @@ class MainDialog(QDialog, Ui_Form):
 
         self.buttonRename.clicked.connect(self._copy_files)
 
+        self.tree_files.clicked.connect(self._update_preview_window)
 
+        self.checkBox_preview.clicked.connect(self._toggle_preview)
+
+
+    def _update_preview_window(self):
+        if self.showPreview:
+            file_id = int(self.tree_files.selectedItems()[0].text(0))
+            filename = self.builder.find_file(file_id)['old']
+            pixmap = QPixmap(filename)
+            scale_ratio = pixmap.width()/self.preview_image.maximumWidth()
+            new_y = pixmap.height() / scale_ratio
+            self.preview_image.setFixedHeight(new_y)
+            self.preview_image.setPixmap(pixmap)
+            self.lbl_filename.setText(os.path.basename(filename))
+
+    def _toggle_preview(self):
+        if self.showPreview:
+            self.showPreview = False
+            self.preview_image.setVisible(False)
+            self.lbl_filename.setVisible(False)
+        else:
+            self.showPreview = True
+            self.preview_image.setVisible(True)
+            self.lbl_filename.setVisible(True)
+        print("Turn {}".format(self.showPreview))
 
     def _test(self):
         # print(self.gridLayout.getItemPosition(self.pushButton_test.))
         self.report = QDialog(self)
-        reportUi = ReportDialog(jobNumber=4, parent=self)
-        if reportUi.exec_():
-            self.report.show()
-        # reportUi.setupUi(self.report)
-        if reportUi.exec_():
-            self.report.show()
+        file_id = int(self.tree_files.selectedItems()[0].text(0))
+
         self._update_data_status()
-        self._debug()
+        # filename = self.builder.find_file(file_id)['old']
+        # image = Image.open(filename)
+        # thumbnail = ImageQt.ImageQt(filename)
+        # pixmap = QPixmap(filename)
+        # scale_ratio = pixmap.width()/self.preview_image.maximumWidth()
+        # new_y = pixmap.height() / scale_ratio
+        # print("starting frame height: {}".format(self.preview_image.maximumHeight()))
+        # print("Image Height: {}".format(pixmap.height()))
+        # print("Image Width:  {}".format(pixmap.width()))
+        # # self.preview_image.setMinimumHeight(new_y)
+        # # self.preview_image.setMinimumHeight(new_y)
+        # self.preview_image.setFixedHeight(new_y)
+        # print("ratio: {}".format(scale_ratio))
+        # print("setting hight to {}".format(new_y))
+        # self.preview_image.setPixmap(pixmap)
+        # print("Frame height: {}".format(self.preview_image.height()))
+        # print("Frame width: {}".format(self.preview_image.width()))
+
+        # print(self.builder.find_file(file_id)['old'])
+        # self._debug()
 
     def _debug(self):
         data_members = self.__dict__
