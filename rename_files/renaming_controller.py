@@ -14,5 +14,5 @@ def generate_report(reporter, report_file_name):
         for index, record in enumerate(records):
             # print(record)
             project_id = (record['project_id_prefix'] + str(record['project_id_number']).zfill(6))
-            object_id = (record['object_id_prefix'] + "_" + str(record['object_id_number']).zfill(5))
+            object_id = (record['object_id_prefix'] + "_" + str(record['object_id_number']).zfill(6))
             csv_file.writerow([index + 1, project_id, object_id, record['source'], os.path.basename(record['destination']), record['ia_url'], record['md5']])
