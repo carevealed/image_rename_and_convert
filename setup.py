@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='rename_files',
-    version='0.2',
+    version='0.2.1',
     packages=find_packages(),
     url='https://github.com/cavpp/rename_files',
     license='GPL',
@@ -12,4 +12,3 @@ setup(
     description='Renames image files from a folder to CAVPP naming scheme',
     entry_points={'console_scripts': ['rename = rename_files.batch_renamer:main']}
 )
-0
