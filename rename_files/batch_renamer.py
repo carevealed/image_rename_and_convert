@@ -25,6 +25,7 @@ def initial_setup():
                     test1.execute('DROP TABLE IF EXISTS jobs;')
                     test1.execute('DROP TABLE IF EXISTS records;')
                     test1.execute('DROP TABLE IF EXISTS files;')
+                    test1.execute('DROP TABLE IF EXISTS file_pairs;')
 
                     # jobs table
                     test1.execute('CREATE TABLE jobs('
@@ -41,18 +42,37 @@ def initial_setup():
                                   'ia_url VARCHAR(512),'
                                   'FOREIGN KEY(job_id) REFERENCES jobs(job_id));')
 
+
+
+                                  # 'FOREIGN KEY(record_id) REFERENCES records(record_id));')
+
+                    # file_pair
+                    test1.execute('CREATE TABLE file_pairs('
+                                  'pair_id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 1 NOT NULL, '
+                                  'source_id INTEGER,'
+                                  'destination_id INTEGER,'
+                                  'record_id INTEGER, '
+                                  'FOREIGN KEY(record_id) REFERENCES records(record_id),'
+                                  'FOREIGN KEY(source_id) REFERENCES files(file_id)'
+                                  ')')
                     # files table
                     test1.execute('CREATE TABLE files('
                                   'file_id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 1 NOT NULL, '
-                                  'record_id INTEGER,'
+                                  # 'record_id INTEGER,'
+                                  'file_name VARCHAR(255),  '
+                                  'file_location VARCHAR(255),'
                                   'source VARCHAR(255),'
-                                  'destination VARCHAR(255),'
-                                  'date_renamed DATE DEFAULT CURRENT_TIMESTAMP,'
+                                  'type VARCHAR(20),'
+                                  # 'destination VARCHAR(255),'
+                                  'date_renamed DATE,'
                                   'md5 VARCHAR(32),'
+                                  'destination_id INTEGER,'
                                   'file_suffix VARCHAR(20),'
                                   'file_extension VARCHAR(4),'
-                                  'file_notes TEXT,'
-                                  'FOREIGN KEY(record_id) REFERENCES records(record_id));')
+                                  'file_notes TEXT, '
+                                  'FOREIGN KEY(destination_id) REFERENCES file_pairs(pair_id)'
+                                  ')')
+
                     test1.close()
                     valid = True
                     pass

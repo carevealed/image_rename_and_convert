@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='rename_files',
-    version='0.2.1',
+    version='0.2.5',
     packages=find_packages(),
     url='https://github.com/cavpp/rename_files',
     license='GPL',

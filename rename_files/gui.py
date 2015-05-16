@@ -1,9 +1,15 @@
+import threading
+from time import sleep
+
 __author__ = 'California Audio Visual Preservation Project'
 from PySide.QtGui import *
 from PySide.QtCore import *
 from PIL import Image, ImageQt
-from rename_files.renaming_model import RenameFactory, ReportFactory, record_bundle
+
+from rename_files.renaming_model import RenameFactory, ReportFactory, record_bundle, FileTypes, AccessExtensions, \
+    NameRecord, RecordStatus
 from rename_files.gui_datafiles.report_gui import Ui_dlg_report
+from rename_files.worker import Worker
 from enum import Enum
 import sys
 import argparse
@@ -37,18 +43,25 @@ class MainDialog(QDialog, Ui_Form):
         self.setupUi(self)
 
         # NON-UI data members
-        self.builder = RenameFactory()
+        self.pixmap = QPixmap()
+        self.jobNumber = None
+
         self.showPreview = True
         self._source = ""
-        self._destination = ""
+        self._destination = None
         self._pid_prefix = ""
         self._pid_startNum = 0
         self._oid_marc = ""
         self._oid_startNum = 0
         self.reporter = ReportFactory(username="asd")  # TODO: add Username input
+        self.copyEngine = Worker(self._destination)
         self.reporter.initize_database()
 
-        # setup UI
+        # setup
+
+        # hide progress bar
+        self.progressBar.setVisible(False)
+
 
         # include a status bar
         self.status_bar = QStatusBar()
@@ -115,17 +128,27 @@ class MainDialog(QDialog, Ui_Form):
 
         self.checkBox_preview.clicked.connect(self._toggle_preview)
 
+        self.copyEngine.updateStatus.connect(self._update_statusbar)
+        self.copyEngine.reset_progress.connect(self._setup_progress_bar)
+        self.copyEngine.update_progress.connect(self._update_progress)
+
+        self.copyEngine.reporter.connect(self._add_record)
+        self.copyEngine.request_report.connect(self._run_reports)
+
 
     def _update_preview_window(self):
         if self.showPreview:
             file_id = int(self.tree_files.selectedItems()[0].text(0))
-            filename = self.builder.find_file(file_id)['old']
-            pixmap = QPixmap(filename)
-            scale_ratio = pixmap.width()/self.preview_image.maximumWidth()
-            new_y = pixmap.height() / scale_ratio
-            self.preview_image.setFixedHeight(new_y)
-            self.preview_image.setPixmap(pixmap)
+            filename = self.copyEngine.builder.find_file(file_id)['source']
+            # self.pixmap.load(filename)
+            newimage = QPixmap(filename)
+
+            scaled_image = newimage.scaledToWidth(self.preview_image.width())
+
+            self.preview_image.setPixmap(scaled_image)
+            self.preview_image.setFixedHeight(scaled_image.height())
             self.lbl_filename.setText(os.path.basename(filename))
+            # self.lbl_filename
 
     def _toggle_preview(self):
         if self.showPreview:
@@ -176,10 +199,10 @@ class MainDialog(QDialog, Ui_Form):
         for item in self.tree_files.selectedItems():
             file_id = int(item.text(0))
             # print("  {}".format(file_id))
-            print(self.builder.find_file(file_id))
+            print(self.copyEngine.builder.find_file(file_id))
 
         print("\n****** DATA Queue ******")
-        for queue in self.builder.queues:
+        for queue in self.copyEngine.builder.queues:
             print(queue)
 
     def _load_files_click(self):
@@ -197,33 +220,57 @@ class MainDialog(QDialog, Ui_Form):
         self._update_data_status()
 
     def _copy_files(self):
-        success = True
-        msg_box = QMessageBox()
+        # include_report = self.checkBox_IncludeReport.isChecked()
+        self.copyEngine.builder.new_path = self._destination
+        # self.copyEngine.setup(destination=self._destination, create_report=include_report, reporter=self.reporter)
+        self.copyEngine.start()
 
-        # print("Copying the files")
-        for i in self.builder.queues:
-            if i.included:
-                record = self.builder.execute_rename_from_queue_by_record(i)
-                # print(i.get_dict()['project id'])
-                self._update_statusbar("Copied {}".format(i.get_dict()['project id']))
-                self.reporter.add_record(record)
+    def _show_report(self):
+        job = self.reporter.current_batch
+        # print("showing report")
+        report = ReportDialog(job)
+        report.exec_()
 
-        if self.checkBox_IncludeReport.isChecked():
-            # print("Generating report")
-            report = os.path.join(self._destination, "report.csv")
-            if os.path.exists(report):
-                os.remove(report)
-            generate_report(self.reporter, report)
-            self._update_statusbar("Report generated to {}".format(report))
-            msg_box.setText("All files and a report have been successfully saved to {}".format(self._destination))
+    def _save_report(self):
+        try:
+            generate_report(self.reporter, os.path.join(self.copyEngine.builder.new_path, "report.csv"))
+        except FileExistsError:
+            msg_box = QMessageBox()
+            msg_box.setText("The saving location already has a report, do you wish to overwrite it?")
+            msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
+            res = msg_box.exec_()
+            if res == QMessageBox.Cancel:
+                pass
+            elif res == QMessageBox.Yes:
+                os.remove(os.path.join(self.copyEngine.builder.new_path, "report.csv"))
+                generate_report(self.reporter, os.path.join(self.copyEngine.builder.new_path, "report.csv"))
+
+            elif res == QMessageBox.No:
+                # Ask user for another name
+                save_box = QFileDialog.getSaveFileName(self, 'Save file', self.copyEngine.builder.new_path, "CSV (*.csv);;All Files (*)")
+
+    def _run_reports(self):
+        checked = self.checkBox_IncludeReport.isChecked()
+        if checked:
+            self._save_report()
+        # else:
+        #     msg_box = QMessageBox()
+        #     msg_box.setText("All files have been successfully saved to {}".format(self._destination))
+        #     msg_box.exec_()
+        self._show_report()
+
+    def _setup_progress_bar(self, total):
+        # self.progressBar.
+        self.progressBar.setMaximum(total)
+        self.progressBar.setProperty("value", 0)
+
+    def _update_progress(self, value):
+        self.progressBar.setProperty("value", value)
+        if value < self.progressBar.maximum():
+           self.progressBar.setVisible(True)
         else:
-            msg_box.setText("All files have been successfully saved to {}".format(self._destination))
-        msg_box.exec_()
-        reportUi = ReportDialog(jobNumber=self.reporter.current_batch)
-        if reportUi.exec_():
-            reportUi.show()
-        if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
-            print(success)
+            self.progressBar.setVisible(False)
+
     def _update_pid_prefix(self, new_prefix):
         self._pid_prefix = new_prefix
         self._update_data_status()
@@ -307,9 +354,15 @@ class MainDialog(QDialog, Ui_Form):
         for item in self.tree_files.selectedItems():
             id = int(item.text(0))
             # print("Changing {}".format(id))
-            current_status = self.builder.find_file(id)['included']
-            self.builder.set_file_include(id, not current_status)
+            current_status = self.copyEngine.builder.find_file(id)['included']
+            self.copyEngine.builder.set_file_include(id, not current_status)
         self.update_tree()
+
+    def _add_record(self, record):
+        if record.get_status == RecordStatus.NEED_TO_APPEND_RECORD:
+            self.reporter._add_access_files(record)
+        self.reporter.add_record(record)
+
 
     def closeEvent(self, *args, **kwargs):
         if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
@@ -350,12 +403,13 @@ class MainDialog(QDialog, Ui_Form):
     def update_tree(self):
         records = []
         self.tree_files.clear()
-        self.builder.update(obj_marc=self._oid_marc,
+        # self.copyEngine.builder.
+        self.copyEngine.builder.update(obj_marc=self._oid_marc,
                     obj_start_num=self._oid_startNum,
                     proj_prefix=self._pid_prefix,
                     proj_start_num=self._pid_startNum,
                     path=self._destination)
-        for queue in self.builder.queues:
+        for queue in self.copyEngine.builder.queues:
             simple = "Simple"
             old_names = ""
             new_names = ""
@@ -370,11 +424,11 @@ class MainDialog(QDialog, Ui_Form):
                 included = "Included"
                 if not file['included']:
                     included = "Excluded"
-                    file['new'] = ""
+                    file['filename'] = ""
                 if not queue.isSimple:
-                    files.append(QTreeWidgetItem(record, ["", "", file["old"], file['new'], included]))
-                old_names += os.path.basename(file['old']) + " "
-                new_names += os.path.basename(file['new']) + " "
+                    files.append(QTreeWidgetItem(record, ["", "", file["source"], file['filename'], included]))
+                old_names += os.path.basename(file['source']) + " "
+                new_names += os.path.basename(file['output_filename']) + " "
                 file_id = file['id']
             record.setText(0, str(file_id))
             record.setText(3, old_names)
@@ -409,7 +463,7 @@ class MainDialog(QDialog, Ui_Form):
                 if os.path.splitext(file)[1] == '.jpg':
                     newfile = os.path.join(root, file)
                     jpegs.append(newfile)
-        self.builder.clear_queues()
+        self.copyEngine.builder.clear_queues()
 
         for index, jpeg in enumerate(jpegs):
             files_per_record = record_bundle(self._oid_marc, index+self._oid_startNum, path=destination)
@@ -419,12 +473,18 @@ class MainDialog(QDialog, Ui_Form):
             for tiff in tiffs:
                 if jpeg_name == os.path.splitext(os.path.basename(tiff))[0]:
                     # print("Found one")
-                    files_per_record.add_file(tiff)
+
+                    # files_per_record.add_file(tiff)
+                    # files_per_record.add_file2(file_name=tiff, file_type=FileTypes.MASTER)
+                    files_per_record.add_file2(file_name=tiff, file_type=FileTypes.ACCESS, new_format=AccessExtensions.JPEG)
                     found_tiff = True
                     break
             if not found_tiff:
-                files_per_record.add_file(jpeg)
-            self.builder.add_queue(files_per_record,
+                # files_per_record.add_file(jpeg)
+                files_per_record.add_file2(file_name=jpeg, file_type=FileTypes.MASTER)
+                # files_per_record.add_file2(file_name=jpeg, file_type=FileTypes.ACCESS)
+
+            self.copyEngine.builder.add_queue(files_per_record,
                               obj_id_prefix=self._oid_marc,
                               obj_id_num=index + self._oid_startNum,
                               proj_id_prefix=self._pid_prefix,
@@ -437,7 +497,7 @@ class MainDialog(QDialog, Ui_Form):
             if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
                 print("Updating tree")
             self._update_statusbar("Updating")
-            self.builder.update(obj_marc=self._oid_marc,
+            self.copyEngine.builder.update(obj_marc=self._oid_marc,
                                 obj_start_num=self._oid_startNum,
                                 proj_prefix=self._pid_prefix,
                                 proj_start_num=self._pid_startNum,
@@ -447,10 +507,13 @@ class MainDialog(QDialog, Ui_Form):
             self.buttonRename.setEnabled(True)
             self._update_statusbar("Updated")
 
+
 class ReportDialog(QDialog, Ui_dlg_report):
 
     def __init__(self, jobNumber, parent=None):
         super(ReportDialog, self).__init__(parent)
+        if not isinstance(jobNumber, int):
+            raise TypeError("Only works with int type, received {}".format(type(jobNumber)))
         self.setupUi(self)
         self.job_number = jobNumber
         self.job_record = None
@@ -465,23 +528,28 @@ class ReportDialog(QDialog, Ui_dlg_report):
         self.job_record = self.database.get_job(self.job_number)
         # self.tableWidget.setEnabled(False)
         self.tableWidget.setRowCount(len(self.job_record))
+        QMessageBox()
         for row, record in enumerate(self.job_record):
             project_id = record['project_id_prefix'] + "_" + str(record['project_id_number']).zfill(6)
             object_id = record['object_id_prefix'] + "_" + str(record['object_id_number']).zfill(6)
 
             self.tableWidget.setItem(row, 0, QTableWidgetItem(project_id))
             self.tableWidget.setItem(row, 1, QTableWidgetItem(object_id))
-            self.tableWidget.setItem(row, 2, QTableWidgetItem(record['source']))
+            self.tableWidget.setItem(row, 2, QTableWidgetItem(record['file_name']))
             self.tableWidget.setItem(row, 3, QTableWidgetItem(record['destination']))
             self.tableWidget.setItem(row, 4, QTableWidgetItem(record['ia_url']))
             self.tableWidget.setItem(row, 5, QTableWidgetItem(record['md5']))
 
 
 def start_gui(folder=None):
-    if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
-        print("Starting GUI with {}".format(folder))
     app = QApplication(sys.argv)
-    form = MainDialog(folder=folder)
+    if folder and folder != "":
+        if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
+            print("Starting GUI with {}".format(folder))
+        form = MainDialog(folder=folder)
+    else:
+        form = MainDialog()
+
     form.show()
     app.exec_()
 

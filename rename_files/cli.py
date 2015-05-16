@@ -3,6 +3,7 @@ import os
 import sys
 import rename_files.renaming_model
 from rename_files.renaming_controller import generate_report
+from rename_files.renaming_model import FileTypes, FileStatus, AccessExtensions
 
 
 __author__ = 'California Audio Visual Preservation Project'
@@ -349,11 +350,15 @@ def start_cli(**settings):
         for tiff in tiffs:
             if jpeg_name == os.path.splitext(os.path.basename(tiff))[0]:
                 # print("Found one")
-                files_per_record.add_file(tiff)
+                # files_per_record.add_file(tiff)
+                # files_per_record.add_file2(file_name=tiff, file_type=FileTypes.MASTER)
+                files_per_record.add_file2(file_name=tiff, file_type=FileTypes.ACCESS, new_format=AccessExtensions.JPEG)
                 found_tiff = True
                 break
         if not found_tiff:
-            files_per_record.add_file(jpeg)
+            # files_per_record.add_file(jpeg)
+            files_per_record.add_file2(file_name=jpeg, file_type=FileTypes.MASTER)
+            # files_per_record.add_file2(file_name=jpeg, file_type=FileTypes.ACCESS, new_format=AccessExtensions.JPEG)
         builder.add_queue(files_per_record,
                           obj_id_prefix=object_id_prefix,
                           obj_id_num=index + first_object_id,
@@ -363,7 +368,8 @@ def start_cli(**settings):
 
     for queue in builder.queues:
         for file in queue.get_dict()['files']:
-            print("\"{}\" -> \"{}\"".format(file['old'], file['new']))
+            if file['file_status'] == FileStatus.NEEDS_TO_BE_CREATED:
+                print("\"{}\" -> \"{}\"".format(file['source'], file['filename']))
         # print("{} {}".format(queue['files']['old'], queue['files']['new']))
     valid = False
     while(not valid):
@@ -383,12 +389,14 @@ def start_cli(**settings):
 
     # Perform the renaming
     for i in builder:
-        record = builder.execute_rename_from_queue_by_record(i)
+        record = builder.execute_rename_from_queue_by_record(i, print_status=True)
         reporter.add_record(record)
 
     print("Renaming Completed")
     # print(type(reporter))
     report_name = os.path.join(settings['destination'], "report.csv")
+    if os.path.exists(report_name):
+        os.remove(report_name)
     generate_report(reporter, report_name)
     # reporter.show_current_records(object_id=object_id_prefix)
     reporter.close_database()

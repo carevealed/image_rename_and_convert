@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/Users/lpsdesk/PycharmProjects/rename_files/rename_files/gui_datafiles/report.ui'
 #
-# Created: Fri May  8 16:06:27 2015
+# Created: Fri May 15 17:58:39 2015
 #      by: pyside-uic 0.2.15 running on PySide 1.2.2
 #
 # WARNING! All changes made in this file will be lost!
