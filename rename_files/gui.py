@@ -359,7 +359,8 @@ class MainDialog(QDialog, Ui_Form):
         self.update_tree()
 
     def _add_record(self, record):
-        if record.get_status == RecordStatus.NEED_TO_APPEND_RECORD:
+        print(record.get_status())
+        if record._status == RecordStatus.NEED_TO_APPEND_RECORD:
             self.reporter._add_access_files(record)
         self.reporter.add_record(record)
 

@@ -364,10 +364,7 @@ class RenameFactory(object):
                         file['filename'] = os.path.basename(destination)
                         file['md5'] = self._calculate_md5(destination)
 
-
-
-
-                        record.set_Done()
+                        record.set_NeedsUpdating()
                     else:
                         sys.stderr.write("Failed!\n")
                         raise IOError("File {0} does not match {1]".format(file['source'], file['filename']))
@@ -384,7 +381,7 @@ class RenameFactory(object):
             temp_files.append(file)
         record.files = temp_files
 
-        record.set_Done()
+        record.set_NeedsUpdating()
         # print("Done")
         return record
 
@@ -512,8 +509,19 @@ class ReportFactory(metaclass=Singleton):
 
     def _add_access_files(self, record):
 
-        print("Adding access")
-
+        # print("Adding access")
+        record_id = self._database.execute('SELECT LAST_INSERT_ROWID()').fetchone()['LAST_INSERT_ROWID()']
+        for file in record.files:
+            if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
+                print("File: {}".format(file))
+            self._database.execute('INSERT INTO files('
+                                   'type, file_name, file_location, md5, file_suffix, file_extension, destination_id) '
+                                   'VALUES(?,?,?,?,?,?,?)',
+                                   (file["file_type"].value, file['source'], file['filename'], file['md5'], file["file_suffix"], os.path.splitext(file['filename'])[1], record_id))
+            # source_id = self._database.execute('SELECT LAST_INSERT_ROWID()').fetchone()['LAST_INSERT_ROWID()']
+            # self._database.execute('UPDATE file_pairs'
+            #                        'set record_id, source_id) '
+            #                        'VALUES(?,?)', (record_id, source_id))
     def add_record(self, record):
         if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
             print("Adding record")
