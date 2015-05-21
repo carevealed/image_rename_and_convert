@@ -70,7 +70,6 @@ class NameRecord(object):
         self.queue = queue
         self.files = []
 
-        # print("files: {}".format(files))
         # TODO: IF you want to make complex, here is where do it
         for file in files.files:
             # if os.path.splitext(file)[1] == ".tif":
@@ -105,7 +104,6 @@ class NameRecord(object):
         self._status = RecordStatus.pending
 
     def get_status(self):
-        # print(self._status)
         if self._status == RecordStatus.pending:
             return "Ready"
         if self._status == RecordStatus.working:
@@ -208,7 +206,7 @@ class RenameFactory(object):
                 queue.project_id = proj_prefix + "_" + str(queue.project_id_number).zfill(6)
                 queue.ia_url = 'https://archive.org/details/' + queue.object_id
                 for file in queue.files:
-                    filename = queue.object_id + file['file_extension']
+                    filename = queue.object_id + "_" + file['file_suffix'] + file['file_extension']
                     file['included'] = True
                     file['filename'] = os.path.join(path, filename)
                     file['output_filename'] = filename
@@ -234,16 +232,12 @@ class RenameFactory(object):
 
 
     def update(self, proj_prefix, proj_start_num, obj_marc, obj_start_num, path):
-        # print("updating builder")
-        # print("proj_prefix: {}, proj_start_num: {}, obj_marc: {}, obj_start_num: {}".format(proj_prefix, proj_start_num, obj_marc, obj_start_num))
         new_queues = []
         # queues = )
         NameRecord.file_local_id = 0
         object_count = 0
         queue_count = 0
         for index, old_queue in enumerate(sorted(self._queues, key=lambda x: x.queue)):
-            # print("\nOld: ", end="")
-            # print(old_queue)
             included_files = []
             excluded_files = []
             files = record_bundle(object_id_prefix=obj_marc, object_id_number=obj_start_num+object_count, path=path)
@@ -258,9 +252,6 @@ class RenameFactory(object):
                     if file['file_type'] == FileTypes.ACCESS:
                         files.add_file2(file['source'], file_type_to_create=file['file_type'], new_format=file['file_extension'])
 
-
-            # print("Included files:{}".format(included_files))
-
             if len(files) > 0:
                 new_queue = NameRecord(files=files,
                                        queue=queue_count,
@@ -273,9 +264,7 @@ class RenameFactory(object):
                 new_queues.append(new_queue)
             else:
                 files = record_bundle(object_id_prefix=obj_marc, object_id_number=obj_start_num+object_count, path=path)
-                # print("excluded files size: {}".format(len(excluded_files)))
                 for excluded_file in excluded_files.files:
-                    print(excluded_file)
                     file = record_bundle(path=path)
                     file_format = None
                     # file.add_file(excluded_file)
@@ -303,8 +292,6 @@ class RenameFactory(object):
                 new_queues.append(new_queue)
 
 
-            # print("New: ", end="")
-            # print(new_queue)
 
             # compaire the originals
         self._queues = new_queues
@@ -316,7 +303,6 @@ class RenameFactory(object):
 
     def add_queue(self, files, obj_id_prefix, obj_id_num, proj_id_prefix, proj_id_num):
         if obj_id_prefix in self.object_ids:
-            # print("found one")
             pass
         else:
             self.object_ids[obj_id_prefix] = obj_id_num
@@ -326,10 +312,8 @@ class RenameFactory(object):
         self._queues.append(new_queue)
 
     def find_file(self, file_id):
-        # print("Finding file id #{}".format(file_id))
         for queue in self._queues:
             for file in queue.files:
-                # print(file)
                 if file['id'] == file_id:
                     return file
 
@@ -370,12 +354,10 @@ class RenameFactory(object):
 
             if queue.queue == queue_id:
                 for file in queue.files:
-                    # print(file)
-                        print("From {} to {} for {}".format(file['included'], include, file))
-                        file['included'] = include
+                    # print("From {} to {} for {}".format(file['included'], include, file))
+                    file['included'] = include
 
-                        print(file)
-                        found_it = True
+                    found_it = True
 
                 if found_it:
                     queue.included = include
@@ -393,9 +375,8 @@ class RenameFactory(object):
         record.set_Working()
         temp_files = []
         for file in record.files:
-
-            new_file = file.copy()
             if file['file_status'] == FileStatus.NEEDS_TO_BE_CREATED or file['file_status'] == FileStatus.NEEDS_TO_BE_COPIED:
+                new_file = copy.copy(file)
                 # new_path = os.path.split(file['new'])[0]
                 if not os.path.exists(self.new_path):
                     os.makedirs(self.new_path)
@@ -404,7 +385,6 @@ class RenameFactory(object):
                     if MODE == running_mode.DEBUG or MODE == running_mode.BUILD or print_status:
                         print("Copying {0} to {1}.".format(file['source'], file['filename']), end="")
                     destination = os.path.join(self.new_path, file['output_filename'])
-                    print(destination)
                     shutil.copy2(file['source'], destination)
                     if filecmp.cmp(file['source'], destination):
                         if MODE == running_mode.DEBUG or MODE == running_mode.BUILD or print_status:
@@ -433,27 +413,28 @@ class RenameFactory(object):
                     else:
                         sys.stderr.write("Failed to convert!\n")
                         raise IOError("File {} was not found after being converted from {}".format(new_file['filename'], file['source']))
-            # FIXME!!!
-            file['md5'] = self._calculate_md5(file['source'])
-            file['file_suffix'] = None
-            file['file_type'] = FileTypes.ORIGINAL
-            temp_files.append(file)
-            temp_files.append(new_file)
-            print(temp_files)
+                # FIXME!!!
+                file['md5'] = self._calculate_md5(file['source'])
+                file['file_suffix'] = None
+                file['file_type'] = FileTypes.ORIGINAL
+                temp_files.append(file)
+                temp_files.append(new_file)
+                destination = None
+            else:
+                pass
 
         record.files = temp_files
 
         record.set_NeedsUpdating()
-        # print("Done")
         return record
 
     def clear_queues(self):
         self._queues = []
 
     def show_queues(self):
-        for queue in self._queues:
-            print(queue.get_dict())
-
+        # for queue in self._queues:
+            # print(queue.get_dict())
+        pass
 
 
     def swap_queues(self, queue_a, queue_b):
@@ -520,13 +501,8 @@ class ReportFactory(metaclass=Singleton):
         if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
             print("init the database")
         if not MODE == running_mode.INIT:
-            # print("data.db: {}".format(os.path.exists('data.db')))
-            # dummy = self._database.execute('SHOW TABLES').fetchall()
-            # for dum in dummy:
-            #     print(dum)
             try:
                 last_batch = self._database.execute('SELECT MAX(job_id) from jobs').fetchone()['MAX(job_id)']
-                # print("last_batch, type: {} value:{}".format(type(last_batch), last_batch))
                 if last_batch:
                     self._current_batch = int(last_batch) + 1
 
@@ -581,7 +557,6 @@ class ReportFactory(metaclass=Singleton):
 
     def _add_access_files(self, record):
 
-        # print("Adding access")
         record_id = self._database.execute('SELECT LAST_INSERT_ROWID()').fetchone()['LAST_INSERT_ROWID()']
         for file in record.files:
             if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
@@ -646,7 +621,6 @@ class ReportFactory(metaclass=Singleton):
                                                                            master["file_suffix"],
                                                                            os.path.splitext(master['filename'])[1],
                                                                            source_id)
-        # print(query)
         self._database.execute(query)
         self._database.execute('INSERT INTO file_pairs('
                                'record_id, source_id) '
@@ -664,9 +638,7 @@ class ReportFactory(metaclass=Singleton):
                                                                                access_file["file_suffix"],
                                                                                os.path.splitext(access_file['filename'])[1],
                                                                                source_id)
-            # print(query)
             self._database.execute(query)
-        # print(FileTypes.MASTER.value)
         self._database.commit()
         pass
 
@@ -675,8 +647,8 @@ class ReportFactory(metaclass=Singleton):
         if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
             print("Getting record {0}.".format(object_id))
             queury = self._database.execute('SELECT * FROM report WHERE object_id is \"{0}\"'.format(object_id))
-            for row in queury:
-                print(row)
+            # for row in queury:
+            #     print(row)
         pass
 
     def get_report(self, object_id=None):
@@ -749,8 +721,6 @@ class record_bundle(object):
         return reply
 
     def __len__(self):
-        # print("len type: {}".format(type(len(self._files))))
-        # int(len(self._files))
         return len(self._files)
 
     @property

@@ -227,7 +227,6 @@ class MainDialog(QDialog, Ui_Form):
 
     def _show_report(self):
         job = self.reporter.current_batch
-        # print("showing report")
         report = ReportDialog(job)
         report.exec_()
 
@@ -358,13 +357,12 @@ class MainDialog(QDialog, Ui_Form):
             # parent = item.parent()
             else:
                 id = int(item.text(0))
-            # print("Changing {}".format(id))
             current_status = self.copyEngine.builder.find_queue(id).included
             self.copyEngine.builder.set_file_include(id, not current_status)
         self.update_tree()
 
     def _add_record(self, record):
-        print(record.get_status())
+        # print(record.get_status())
         # if record._status == RecordStatus.NEED_TO_APPEND_RECORD:
         #     self.reporter._add_access_files(record)
         self.reporter.add_record(record)
@@ -512,7 +510,7 @@ class MainDialog(QDialog, Ui_Form):
             if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
                 print("Updating tree")
             self._update_statusbar("Updating")
-            self.copyEngine.builder.update(obj_marc=self._oid_marc,
+            self.copyEngine.builder.update2(obj_marc=self._oid_marc,
                                 obj_start_num=self._oid_startNum,
                                 proj_prefix=self._pid_prefix,
                                 proj_start_num=self._pid_startNum,

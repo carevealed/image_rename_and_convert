@@ -40,7 +40,6 @@ class Worker(QThread):
         for index, i in enumerate(self.builder.queues):
             if i.included:
                 record = self.builder.execute_rename_from_queue_by_record(i)
-                # print(i.get_dict()['project id'])
                 self.updateStatus.emit("Saving {}".format(i.get_dict()['project id']))
                 self.reporter.emit(record)
                 # self.reporter.add_record(record)

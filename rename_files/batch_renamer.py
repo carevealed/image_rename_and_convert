@@ -11,10 +11,14 @@ datafile = "data.db"
 
 def initial_setup():
     if os.path.exists(datafile):
-        print("found it in {}", os.path.abspath(datafile))
+        print("Found database file: {}".format(os.path.abspath(datafile)))
         test1 = sqlite3.connect(os.path.abspath(datafile))
         try:
-            test1.execute("SELECT * FROM jobs")
+            test1.execute("SELECT job_id, username FROM jobs")
+            test1.execute("SELECT pair_id, source_id, destination_id, record_id FROM file_pairs")
+            test1.execute("SELECT record_id,job_id, project_id_number, project_id_prefix, object_id_number, object_id_prefix, ia_url FROM records")
+            test1.execute("SELECT file_id, file_name, file_location, source, type, date_renamed, md5, file_suffix, file_extension FROM files")
+
             # test to see if the database will work.
             pass
         except sqlite3.OperationalError:
