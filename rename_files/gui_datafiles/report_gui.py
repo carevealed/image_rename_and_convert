@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/Users/lpsdesk/PycharmProjects/rename_files/rename_files/gui_datafiles/report.ui'
 #
-# Created: Fri May 15 18:21:06 2015
+# Created: Wed May 20 17:26:02 2015
 #      by: pyside-uic 0.2.15 running on PySide 1.2.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -50,8 +50,8 @@ class Ui_dlg_report(object):
         self.tableWidget.horizontalHeaderItem(1).setText(QtGui.QApplication.translate("dlg_report", "Object ID", None, QtGui.QApplication.UnicodeUTF8))
         self.tableWidget.horizontalHeaderItem(2).setText(QtGui.QApplication.translate("dlg_report", "Old Name", None, QtGui.QApplication.UnicodeUTF8))
         self.tableWidget.horizontalHeaderItem(3).setText(QtGui.QApplication.translate("dlg_report", "New Name", None, QtGui.QApplication.UnicodeUTF8))
-        self.tableWidget.horizontalHeaderItem(4).setText(QtGui.QApplication.translate("dlg_report", "Internet Archive URL", None, QtGui.QApplication.UnicodeUTF8))
-        self.tableWidget.horizontalHeaderItem(5).setText(QtGui.QApplication.translate("dlg_report", "MD5", None, QtGui.QApplication.UnicodeUTF8))
+        self.tableWidget.horizontalHeaderItem(4).setText(QtGui.QApplication.translate("dlg_report", "MD5", None, QtGui.QApplication.UnicodeUTF8))
+        self.tableWidget.horizontalHeaderItem(5).setText(QtGui.QApplication.translate("dlg_report", "Internet Archive URL", None, QtGui.QApplication.UnicodeUTF8))
         self.tableWidget.horizontalHeaderItem(6).setText(QtGui.QApplication.translate("dlg_report", "Username", None, QtGui.QApplication.UnicodeUTF8))
         self.pushButton.setText(QtGui.QApplication.translate("dlg_report", "Close", None, QtGui.QApplication.UnicodeUTF8))
 
