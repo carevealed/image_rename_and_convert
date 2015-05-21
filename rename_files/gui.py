@@ -352,16 +352,21 @@ class MainDialog(QDialog, Ui_Form):
 
     def _include_selection(self):
         for item in self.tree_files.selectedItems():
-            id = int(item.text(0))
+            hasParent =item.parent()
+            if hasParent:
+                id = int(item.parent().text(0))
+            # parent = item.parent()
+            else:
+                id = int(item.text(0))
             # print("Changing {}".format(id))
-            current_status = self.copyEngine.builder.find_file(id)['included']
+            current_status = self.copyEngine.builder.find_queue(id).included
             self.copyEngine.builder.set_file_include(id, not current_status)
         self.update_tree()
 
     def _add_record(self, record):
         print(record.get_status())
-        if record._status == RecordStatus.NEED_TO_APPEND_RECORD:
-            self.reporter._add_access_files(record)
+        # if record._status == RecordStatus.NEED_TO_APPEND_RECORD:
+        #     self.reporter._add_access_files(record)
         self.reporter.add_record(record)
 
 
@@ -404,12 +409,12 @@ class MainDialog(QDialog, Ui_Form):
     def update_tree(self):
         records = []
         self.tree_files.clear()
-        # self.copyEngine.builder.
-        self.copyEngine.builder.update(obj_marc=self._oid_marc,
-                    obj_start_num=self._oid_startNum,
-                    proj_prefix=self._pid_prefix,
-                    proj_start_num=self._pid_startNum,
-                    path=self._destination)
+        self.copyEngine.builder.update2(self._pid_prefix, self._pid_startNum, self._oid_marc, self._oid_startNum, self._destination)
+        # self.copyEngine.builder.update(obj_marc=self._oid_marc,
+        #             obj_start_num=self._oid_startNum,
+        #             proj_prefix=self._pid_prefix,
+        #             proj_start_num=self._pid_startNum,
+        #             path=self._destination)
         for queue in self.copyEngine.builder.queues:
             simple = "Simple"
             old_names = ""
@@ -419,26 +424,33 @@ class MainDialog(QDialog, Ui_Form):
 
             if not queue.isSimple:
                 simple = "Complex"
-            record = QTreeWidgetItem(self.tree_files, ["", queue.project_id, simple])
-
+            if queue.included:
+                project_id = queue.project_id
+            else:
+                project_id = ""
+            record = QTreeWidgetItem(self.tree_files, ["", project_id, simple])
+            file_id = str(queue.queue)
             for file in queue.files:
+
                 included = "Included"
                 if not file['included']:
                     included = "Excluded"
-                    file['filename'] = ""
+                    # file['filename'] = ""
                 if not queue.isSimple:
                     files.append(QTreeWidgetItem(record, ["", "", file["source"], file['filename'], included]))
-                old_names += os.path.basename(file['source']) + " "
-                new_names += os.path.basename(file['output_filename']) + " "
-                file_id = file['id']
-            record.setText(0, str(file_id))
+                old_names = os.path.basename(file['source']) + " "
+                if file['included']:
+                    new_name = os.path.basename(file['filename']) + " "
+                    dummy = QTreeWidgetItem(record, [file_id,'','', '', new_name])
+
+                    record.addChild(dummy)
+            record.setText(0, file_id)
             record.setText(3, old_names)
-            record.setText(4, new_names)
             record.setText(6, queue.get_status())
             if queue.files:
                 if queue.isSimple:
                     included = "Included"
-                    if not queue.files[0]['included']:
+                    if not queue.included:
                         included = "Excluded"
                     record.setText(5, included)
 
@@ -477,12 +489,14 @@ class MainDialog(QDialog, Ui_Form):
 
                     # files_per_record.add_file(tiff)
                     # files_per_record.add_file2(file_name=tiff, file_type=FileTypes.MASTER)
-                    files_per_record.add_file2(file_name=tiff, file_type=FileTypes.ACCESS, new_format=AccessExtensions.JPEG)
+                    files_per_record.add_file2(file_name=tiff, file_type_to_create=FileTypes.MASTER)
+                    files_per_record.add_file2(file_name=tiff, file_type_to_create=FileTypes.ACCESS, new_format=AccessExtensions.JPEG.value)
+
                     found_tiff = True
                     break
             if not found_tiff:
                 # files_per_record.add_file(jpeg)
-                files_per_record.add_file2(file_name=jpeg, file_type=FileTypes.MASTER)
+                files_per_record.add_file2(file_name=jpeg, file_type_to_create=FileTypes.MASTER)
                 # files_per_record.add_file2(file_name=jpeg, file_type=FileTypes.ACCESS)
 
             self.copyEngine.builder.add_queue(files_per_record,
@@ -536,10 +550,10 @@ class ReportDialog(QDialog, Ui_dlg_report):
 
             self.tableWidget.setItem(row, 0, QTableWidgetItem(project_id))
             self.tableWidget.setItem(row, 1, QTableWidgetItem(object_id))
-            self.tableWidget.setItem(row, 2, QTableWidgetItem(record['file_name']))
-            self.tableWidget.setItem(row, 3, QTableWidgetItem(record['destination']))
-            self.tableWidget.setItem(row, 4, QTableWidgetItem(record['ia_url']))
-            self.tableWidget.setItem(row, 5, QTableWidgetItem(record['md5']))
+            self.tableWidget.setItem(row, 2, QTableWidgetItem(record['original_name']))
+            self.tableWidget.setItem(row, 3, QTableWidgetItem(record['new_name']))
+            self.tableWidget.setItem(row, 4, QTableWidgetItem(record['new_md5']))
+            self.tableWidget.setItem(row, 5, QTableWidgetItem(record['ia_url']))
 
 
 def start_gui(folder=None):
