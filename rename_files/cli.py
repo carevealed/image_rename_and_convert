@@ -352,12 +352,12 @@ def start_cli(**settings):
                 # print("Found one")
                 # files_per_record.add_file(tiff)
                 # files_per_record.add_file2(file_name=tiff, file_type=FileTypes.MASTER)
-                files_per_record.add_file2(file_name=tiff, file_type=FileTypes.ACCESS, new_format=AccessExtensions.JPEG)
+                files_per_record.add_file2(file_name=tiff, file_type_to_create=FileTypes.ACCESS, new_format=AccessExtensions.JPEG)
                 found_tiff = True
                 break
         if not found_tiff:
             # files_per_record.add_file(jpeg)
-            files_per_record.add_file2(file_name=jpeg, file_type=FileTypes.MASTER)
+            files_per_record.add_file2(file_name=jpeg, file_type_to_create=FileTypes.MASTER)
             # files_per_record.add_file2(file_name=jpeg, file_type=FileTypes.ACCESS, new_format=AccessExtensions.JPEG)
         builder.add_queue(files_per_record,
                           obj_id_prefix=object_id_prefix,

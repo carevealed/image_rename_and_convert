@@ -50,12 +50,12 @@
      </column>
      <column>
       <property name="text">
-       <string>Internet Archive URL</string>
+       <string>MD5</string>
       </property>
      </column>
      <column>
       <property name="text">
-       <string>MD5</string>
+       <string>Internet Archive URL</string>
       </property>
      </column>
      <column>

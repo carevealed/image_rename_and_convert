@@ -12,9 +12,11 @@ datafile = "data.db"
 def initial_setup():
     if os.path.exists(datafile):
         print("found it in {}", os.path.abspath(datafile))
-        test1 = sqlite3.connect(datafile)
+        test1 = sqlite3.connect(os.path.abspath(datafile))
         try:
-            test1.execute("SELECT * FROM jobs JOIN records ON jobs.job_id=records.job_id JOIN files ON records.record_id=files.record_id")
+            test1.execute("SELECT * FROM jobs")
+            # test to see if the database will work.
+            pass
         except sqlite3.OperationalError:
             valid = False
             while not valid:
@@ -116,6 +118,11 @@ def remove_database():
     pass
 
 
+def found_data_file():
+    if os.path.exists(datafile):
+        pass
+
+
 def main():
     parser = argparse.ArgumentParser(description="Renamer")
     parser.add_argument('-s', '--source', type=str, help="The source")
@@ -139,7 +146,8 @@ def main():
 
         remove_database()
         quit()
-    initial_setup()
+    if not found_data_file():
+        initial_setup()
 
     if args.source and not args.gui:
         print("Starting CLI mode")

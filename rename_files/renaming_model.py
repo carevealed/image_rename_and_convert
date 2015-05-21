@@ -684,6 +684,13 @@ class ReportFactory(metaclass=Singleton):
 
     def close_database(self):
         self._database.close()
+        try:
+            self._database.execute("SELECT * FROM jobs")
+        except sqlite3.ProgrammingError:
+            print("Closed the database")
+
+
+
 
     def get_last_job(self):
         # results = self._database.execute('SELECT pair_id, file_name, file_location, file_suffix, file_extension, type, '
