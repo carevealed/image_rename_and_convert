@@ -62,6 +62,15 @@ class MainDialog(QDialog, Ui_Form):
         # hide progress bar
         self.progressBar.setVisible(False)
 
+        # hide metadata stats
+
+        # self.le_resolution.setVisible(False)
+        # self.lbl_resolution.setVisible(False)
+        # self.lbl_fileSize.setVisible(False)
+        # self.le_fileSize.setVisible(False)
+        # self.lbl_colorDepth.setVisible(False)
+        # self.le_colorDepth.setVisible(False)
+        self.frame_7.setVisible(False)
 
         # include a status bar
         self.status_bar = QStatusBar()
@@ -77,7 +86,8 @@ class MainDialog(QDialog, Ui_Form):
 
         # hide the first column in normal mode
         if MODE == running_mode.NORMAL:
-            self.tree_files.hideColumn(0)
+            self.tree_files.hideColumn(1)
+            self.tree_files.hideColumn(2)
 
         # set a test button if debut or building mode is on
         if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING or MODE == running_mode.TESTING:
@@ -138,9 +148,16 @@ class MainDialog(QDialog, Ui_Form):
 
     def _update_preview_window(self):
         if self.showPreview:
-            file_id = int(self.tree_files.selectedItems()[0].text(0))
+            # dummy = self.tree_files.selectedItems()[0].parent()
+            if self.tree_files.selectedItems()[0].parent():
+                item = self.tree_files.selectedItems()[0].parent()
+            else:
+                item = self.tree_files.selectedItems()[0]
+            file_id = int(item.text(2))
+            # file_id
             filename = self.copyEngine.builder.find_file(file_id)['source']
             # self.pixmap.load(filename)
+
             newimage = QPixmap(filename)
 
             scaled_image = newimage.scaledToWidth(self.preview_image.width())
@@ -206,7 +223,11 @@ class MainDialog(QDialog, Ui_Form):
             print(queue)
 
     def _load_files_click(self):
-        self.load_files(source=self.lineEdit_source.text(), destination=self._destination)
+        if self.cb_searchType.currentIndex() == 0:
+            smart = True
+        else:
+            smart = False
+        self.load_files(source=self.lineEdit_source.text(), destination=self._destination, smart_sorting=smart)
 
     def _update_statusbar(self, message):
         self.status_bar.showMessage("Status: {}".format(message))
@@ -353,10 +374,10 @@ class MainDialog(QDialog, Ui_Form):
         for item in self.tree_files.selectedItems():
             hasParent =item.parent()
             if hasParent:
-                id = int(item.parent().text(0))
+                id = int(item.parent().text(1))
             # parent = item.parent()
             else:
-                id = int(item.text(0))
+                id = int(item.text(1))
             current_status = self.copyEngine.builder.find_queue(id).included
             self.copyEngine.builder.set_file_include(id, not current_status)
         self.update_tree()
@@ -418,7 +439,7 @@ class MainDialog(QDialog, Ui_Form):
             old_names = ""
             new_names = ""
             files = []
-            file_id = ""
+            queue_id = ""
 
             if not queue.isSimple:
                 simple = "Complex"
@@ -426,8 +447,9 @@ class MainDialog(QDialog, Ui_Form):
                 project_id = queue.project_id
             else:
                 project_id = ""
-            record = QTreeWidgetItem(self.tree_files, ["", project_id, simple])
-            file_id = str(queue.queue)
+
+            record = QTreeWidgetItem(self.tree_files, ["", "", str(queue.files[0]["id"]), project_id, simple])
+            queue_id = str(queue.queue)
             for file in queue.files:
 
                 included = "Included"
@@ -435,73 +457,92 @@ class MainDialog(QDialog, Ui_Form):
                     included = "Excluded"
                     # file['filename'] = ""
                 if not queue.isSimple:
-                    files.append(QTreeWidgetItem(record, ["", "", file["source"], file['filename'], included]))
+                    files.append(QTreeWidgetItem(record, ["", "", str(file["id"]), file["source"], file['filename'], included]))
                 old_names = os.path.basename(file['source']) + " "
                 if file['included']:
                     new_name = os.path.basename(file['filename']) + " "
-                    dummy = QTreeWidgetItem(record, [file_id,'','', '', new_name])
+                    dummy = QTreeWidgetItem(record, ["", queue_id, str(file["id"]), '','', '', new_name])
 
                     record.addChild(dummy)
-            record.setText(0, file_id)
-            record.setText(3, old_names)
-            record.setText(6, queue.get_status())
+            record.setText(1, queue_id)
+            record.setText(5, old_names)
+            record.setText(8, queue.get_status())
             if queue.files:
                 if queue.isSimple:
                     included = "Included"
                     if not queue.included:
                         included = "Excluded"
-                    record.setText(5, included)
+                    record.setText(7, included)
 
             records.append(record)
         self.tree_files.addTopLevelItems(records)
 
-    def load_files(self, source, destination=None):
+    def load_files(self, source, destination=None, smart_sorting=True):
         tiffs = []
         jpegs = []
 
-
+        NameRecord.reset_fileID(self)
         # destination = "/Volumes/CAVPPTestDrive/"
 
         newfile = ""
 
         self.tree_files.clear()
         # get all the files that match either tif or jpg
+        self.copyEngine.builder.clear_queues()
         for root, subdirs, files in os.walk(source):
             for index, file in enumerate(files):
+                if file.startswith('.'):
+                    continue
+                files_per_record = record_bundle(self._oid_marc, index+self._oid_startNum, path=destination)
                 if os.path.splitext(file)[1] == '.tif':
                     newfile = os.path.join(root, file)
-                    tiffs.append(newfile)
-                if os.path.splitext(file)[1] == '.jpg':
+                    if smart_sorting:
+                        tiffs.append(newfile)
+                    else:
+                        files_per_record.add_file2(file_name=newfile, file_type_to_create=FileTypes.MASTER)
+                        files_per_record.add_file2(file_name=newfile, file_type_to_create=FileTypes.ACCESS, new_format=AccessExtensions.JPEG.value)
+                elif os.path.splitext(file)[1] == '.jpg':
                     newfile = os.path.join(root, file)
-                    jpegs.append(newfile)
-        self.copyEngine.builder.clear_queues()
+                    if smart_sorting:
+                        jpegs.append(newfile)
+                    else:
+                        files_per_record.add_file2(file_name=newfile, file_type_to_create=FileTypes.MASTER)
+                if not smart_sorting:
+                    self.copyEngine.builder.add_queue(files_per_record,
+                                      obj_id_prefix=self._oid_marc,
+                                      obj_id_num=index + self._oid_startNum,
+                                      proj_id_prefix=self._pid_prefix,
+                                      proj_id_num=index + self._pid_startNum)
 
-        for index, jpeg in enumerate(jpegs):
-            files_per_record = record_bundle(self._oid_marc, index+self._oid_startNum, path=destination)
-            jpeg_name = os.path.splitext(os.path.basename(jpeg))[0]
-            found_tiff = False
-            # print(jpeg_name)
-            for tiff in tiffs:
-                if jpeg_name == os.path.splitext(os.path.basename(tiff))[0]:
-                    # print("Found one")
 
-                    # files_per_record.add_file(tiff)
-                    # files_per_record.add_file2(file_name=tiff, file_type=FileTypes.MASTER)
-                    files_per_record.add_file2(file_name=tiff, file_type_to_create=FileTypes.MASTER)
-                    files_per_record.add_file2(file_name=tiff, file_type_to_create=FileTypes.ACCESS, new_format=AccessExtensions.JPEG.value)
+        if smart_sorting:
+            for index, jpeg in enumerate(jpegs):
+                files_per_record = record_bundle(self._oid_marc, index+self._oid_startNum, path=destination)
+                jpeg_name = os.path.splitext(os.path.basename(jpeg))[0]
+                found_tiff = False
+                for tiff in tiffs:
+                    if jpeg_name == os.path.splitext(os.path.basename(tiff))[0]:
 
-                    found_tiff = True
-                    break
-            if not found_tiff:
-                # files_per_record.add_file(jpeg)
-                files_per_record.add_file2(file_name=jpeg, file_type_to_create=FileTypes.MASTER)
-                # files_per_record.add_file2(file_name=jpeg, file_type=FileTypes.ACCESS)
 
-            self.copyEngine.builder.add_queue(files_per_record,
-                              obj_id_prefix=self._oid_marc,
-                              obj_id_num=index + self._oid_startNum,
-                              proj_id_prefix=self._pid_prefix,
-                              proj_id_num=index + self._pid_startNum)
+                        files_per_record.add_file2(file_name=tiff, file_type_to_create=FileTypes.MASTER)
+                        files_per_record.add_file2(file_name=tiff, file_type_to_create=FileTypes.ACCESS, new_format=AccessExtensions.JPEG.value)
+
+                        found_tiff = True
+                        break
+                if not found_tiff:
+                    # files_per_record.add_file(jpeg)
+                    files_per_record.add_file2(file_name=jpeg, file_type_to_create=FileTypes.MASTER)
+                    # files_per_record.add_file2(file_name=jpeg, file_type=FileTypes.ACCESS)
+
+                self.copyEngine.builder.add_queue(files_per_record,
+                                  obj_id_prefix=self._oid_marc,
+                                  obj_id_num=index + self._oid_startNum,
+                                  proj_id_prefix=self._pid_prefix,
+                                  proj_id_num=index + self._pid_startNum)
+
+
+
+
         self.buttonRename.setEnabled(True)
         self.update_tree()
 

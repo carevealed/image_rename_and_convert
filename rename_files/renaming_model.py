@@ -103,6 +103,9 @@ class NameRecord(object):
         self.complex_obj_group = None
         self._status = RecordStatus.pending
 
+    def reset_fileID(self):
+        NameRecord.file_local_id = 0
+
     def get_status(self):
         if self._status == RecordStatus.pending:
             return "Ready"
@@ -232,6 +235,7 @@ class RenameFactory(object):
 
 
     def update(self, proj_prefix, proj_start_num, obj_marc, obj_start_num, path):
+        raise DeprecationWarning
         new_queues = []
         # queues = )
         NameRecord.file_local_id = 0
@@ -300,6 +304,8 @@ class RenameFactory(object):
 
     def clear_queues(self):
         self._queues = []
+
+
 
     def add_queue(self, files, obj_id_prefix, obj_id_num, proj_id_prefix, proj_id_num):
         if obj_id_prefix in self.object_ids:
