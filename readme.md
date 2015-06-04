@@ -27,11 +27,7 @@ Option 1: Install binary (Wheel)
 https://github.com/cavpp/rename_files/releases. Right click on the link to latest version that ends in .whl and copy the address.
 2. Open a terminal and type "sudo pip3 install" and paste in the link. 
     
-    
-    For example:
-    
-        sudo pip3 install https://github.com/cavpp/rename_files/releases/download/Prerelease/rename_files-0.1-py2.py3-none-any.whl
-
+  
 #### Notes: 
 
 
@@ -41,6 +37,7 @@ https://github.com/cavpp/rename_files/releases. Right click on the link to lates
  
         sudo easy_install pip
 
+If easy_install doesn't work, try following the instructions at this [link](https://pip.pypa.io/en/latest/installing.html#install-pip).
 
 
 
