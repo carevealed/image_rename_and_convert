@@ -451,9 +451,14 @@ class RenameFactory(object):
 
         if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
             print("converting {}".format(file['source']))
-        img = Image.open(file['source'])
-        img.save(os.path.join(self.new_path, file['output_filename']), 'jpeg', icc_profile=img.info.get("icc_profile"), quality=90, subsampling=1)
-        img.close()
+        try:
+            img = Image.open(file['source'])
+            img.save(os.path.join(self.new_path, file['output_filename']), 'jpeg', icc_profile=img.info.get("icc_profile"), quality=90, subsampling=1)
+            img.close()
+        except IOError:
+            img = Image.open(file['source']).convert('RGB')
+            img.save(os.path.join(self.new_path, file['output_filename']), 'jpeg', icc_profile=img.info.get("icc_profile"), quality=90, subsampling=1)
+            img.close()
         if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
             print("Calculating new checksum")
 

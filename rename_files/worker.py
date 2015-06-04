@@ -16,6 +16,7 @@ class Worker(QThread):
     reset_progress = Signal(int)
     update_progress = Signal(int)
     request_report = Signal()
+    error_reporter = Signal(str)
 
 
     def __init__(self, path):
@@ -39,9 +40,14 @@ class Worker(QThread):
         self.reset_progress.emit(len(self.builder.queues))
         for index, i in enumerate(self.builder.queues):
             if i.included:
-                record = self.builder.execute_rename_from_queue_by_record(i)
                 self.updateStatus.emit("Saving {}".format(i.get_dict()['project id']))
-                self.reporter.emit(record)
+                try:
+                    record = self.builder.execute_rename_from_queue_by_record(i)
+                    self.reporter.emit(record)
+                except IOError as ie:
+                    error_message = "Problem with: {}. {}".format(i.get_dict()['project id'], ie)
+                    self.updateStatus.emit("error_message")
+                    self.error_reporter.emit(error_message)
                 # self.reporter.add_record(record)
             self.update_progress.emit(index+1)
         self.request_report.emit()

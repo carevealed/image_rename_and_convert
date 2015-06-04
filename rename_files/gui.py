@@ -4,7 +4,7 @@ from time import sleep
 __author__ = 'California Audio Visual Preservation Project'
 from PySide.QtGui import *
 from PySide.QtCore import *
-from PIL import Image, ImageQt
+from PIL import Image
 
 from rename_files.renaming_model import RenameFactory, ReportFactory, record_bundle, FileTypes, AccessExtensions, \
     NameRecord, RecordStatus
@@ -17,6 +17,17 @@ from enum import Enum
 import os
 from rename_files.renaming_controller import generate_report
 
+COLOR_MODES = dict({"1": "1-bit pixels, black and white, stored with one pixel per byte",
+                    "L": "8-bit pixels, black and white",
+                    "P": "8-bit pixels, mapped to any other mode using a color palette",
+                    "RGB": "3x8-bit pixels, true color",
+                    "RGBA": "4x8-bit pixels, true color with transparency mask",
+                    "CMYK": "4x8-bit pixels, color separation",
+                    "YCbCr": "3x8-bit pixels, color video format",
+                    "LAB": "3x8-bit pixels, the L*a*b color space",
+                    "HSV": "3x8-bit pixels, Hue, Saturation, Value color space",
+                    "I": "32-bit signed integer pixels",
+                    "F": "32-bit floating point pixels"})
 
 class running_mode(Enum):
     NORMAL = 0
@@ -70,7 +81,6 @@ class MainDialog(QDialog, Ui_Form):
         # self.le_fileSize.setVisible(False)
         # self.lbl_colorDepth.setVisible(False)
         # self.le_colorDepth.setVisible(False)
-        self.frame_7.setVisible(False)
 
         # include a status bar
         self.status_bar = QStatusBar()
@@ -98,6 +108,7 @@ class MainDialog(QDialog, Ui_Form):
             self.pushButton_test.setText("Test")
             self.gridLayout.addWidget(self.pushButton_test, 2, 0, 3, 0)
             self.pushButton_test.clicked.connect(self._test)
+
 
         if folder:
             self.lineEdit_source.insert(folder)
@@ -144,6 +155,7 @@ class MainDialog(QDialog, Ui_Form):
 
         self.copyEngine.reporter.connect(self._add_record)
         self.copyEngine.request_report.connect(self._run_reports)
+        self.copyEngine.error_reporter.connect(self._display_error)
 
 
     def _update_preview_window(self):
@@ -159,25 +171,43 @@ class MainDialog(QDialog, Ui_Form):
             # self.pixmap.load(filename)
 
             newimage = QPixmap(filename)
+            imageMetadata = Image.open(filename)
 
-            scaled_image = newimage.scaledToWidth(self.preview_image.width())
 
+            self.le_color.setText(COLOR_MODES[imageMetadata.mode])
+            # scaled_image = newimage.scaledToWidth(self.preview_image.width())
+            top_size = self.frame_preview.height() - self.frame_7.height() - 20
+            scaled_image = newimage.scaledToHeight(top_size)
+            # print(scaled_image.height())
+            # print()
+            self.le_fileSize.setText((str(int(os.path.getsize(filename)/1024)) + " Kb"))
             self.preview_image.setPixmap(scaled_image)
-            self.preview_image.setFixedHeight(scaled_image.height())
-            self.lbl_filename.setText(os.path.basename(filename))
-            # self.lbl_filename
+            # self.preview_image.setMinimumWidth(scaled_image.width())
+            self.preview_image.setMinimumHeight(scaled_image.height())
+            self.le_fileName.setText(os.path.basename(filename))
+            resolution = str(newimage.width()) + " x " + str(newimage.height())
+
+            self.le_resolution.setText(resolution)
+
+
 
     def _toggle_preview(self):
         if self.showPreview:
+            self.frame_preview.setVisible(False)
             self.showPreview = False
-            self.preview_image.setVisible(False)
-            self.lbl_filename.setVisible(False)
+            # self.preview_image.setVisible(False)
+            # self.lbl_filename.setVisible(False)
+            # self.frame_7.setVisible(False)
         else:
+            self.frame_preview.setVisible(True)
             self.showPreview = True
-            self.preview_image.setVisible(True)
-            self.lbl_filename.setVisible(True)
+            # self.preview_image.setVisible(True)
+            # self.lbl_filename.setVisible(True)
+            # self.frame_7.setVisible(True)
         print("Turn {}".format(self.showPreview))
-
+    def _display_error(self, message):
+        QErrorMessage.showMessage(message)
+        pass
     def _test(self):
         # print(self.gridLayout.getItemPosition(self.pushButton_test.))
         self.report = QDialog(self)
@@ -494,14 +524,14 @@ class MainDialog(QDialog, Ui_Form):
                 if file.startswith('.'):
                     continue
                 files_per_record = record_bundle(self._oid_marc, index+self._oid_startNum, path=destination)
-                if os.path.splitext(file)[1] == '.tif':
+                if os.path.splitext(file)[1].lower() == '.tif':
                     newfile = os.path.join(root, file)
                     if smart_sorting:
                         tiffs.append(newfile)
                     else:
                         files_per_record.add_file2(file_name=newfile, file_type_to_create=FileTypes.MASTER)
                         files_per_record.add_file2(file_name=newfile, file_type_to_create=FileTypes.ACCESS, new_format=AccessExtensions.JPEG.value)
-                elif os.path.splitext(file)[1] == '.jpg':
+                elif os.path.splitext(file)[1].lower() == '.jpg':
                     newfile = os.path.join(root, file)
                     if smart_sorting:
                         jpegs.append(newfile)
