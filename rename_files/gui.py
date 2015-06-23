@@ -206,8 +206,11 @@ class MainDialog(QDialog, Ui_Form):
             # self.frame_7.setVisible(True)
         print("Turn {}".format(self.showPreview))
     def _display_error(self, message):
-        QErrorMessage.showMessage(message)
-        pass
+        # error_message = QErrorMessage(self)
+        QMessageBox.critical(self,"Converting Error", message)
+        # error_message.showMessage(message)
+        self.copyEngine.resume()
+
     def _test(self):
         # print(self.gridLayout.getItemPosition(self.pushButton_test.))
         self.report = QDialog(self)

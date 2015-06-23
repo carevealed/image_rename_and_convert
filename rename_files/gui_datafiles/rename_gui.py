@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/Users/lpsdesk/PycharmProjects/rename_files/rename_files/gui_datafiles/rename.ui'
 #
-# Created: Thu Jun  4 13:41:16 2015
+# Created: Fri Jun  5 12:40:39 2015
 #      by: pyside-uic 0.2.15 running on PySide 1.2.2
 #
 # WARNING! All changes made in this file will be lost!

@@ -8,7 +8,7 @@ from os.path import expanduser
 import sqlite3
 import shutil
 import sys
-from PIL import Image
+from PIL import Image, ImageFile, ImageFilter
 import copy
 
 
@@ -40,6 +40,12 @@ class AccessExtensions(Enum):
 
 class SupportedMasters(Enum):
     TIFF = '.tif'
+
+class AmbiguousMode(Exception):
+    def __init__(self, message):
+        self.message = message
+    def __str__(self):
+        return repr(self.message)
 
 CHECK_CHECKSUMS = True
 DEBUG = True
@@ -448,17 +454,23 @@ class RenameFactory(object):
 
     def convert_format(self, file):
         new_file = file.copy()
-
         if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
             print("converting {}".format(file['source']))
-        try:
-            img = Image.open(file['source'])
-            img.save(os.path.join(self.new_path, file['output_filename']), 'jpeg', icc_profile=img.info.get("icc_profile"), quality=90, subsampling=1)
-            img.close()
-        except IOError:
-            img = Image.open(file['source']).convert('RGB')
-            img.save(os.path.join(self.new_path, file['output_filename']), 'jpeg', icc_profile=img.info.get("icc_profile"), quality=90, subsampling=1)
-            img.close()
+        img = Image.open(file['source'])
+        if img.mode == '1':
+            # blur the image to make it compress better
+            img = img.convert('RGB')
+            img = img.filter(ImageFilter.GaussianBlur(3))
+        img = img.convert('RGB')
+
+
+            # raise AmbiguousMode(file['source'])
+        img.save(os.path.join(self.new_path, file['output_filename']), 'jpeg', icc_profile=img.info.get("icc_profile"), quality=90, subsampling=1, progressive=True)
+        img.close()
+        # except IOError:
+        #     img = Image.open(file['source'])
+        #     img.save(os.path.join(self.new_path, file['output_filename']), 'jpeg', icc_profile=img.info.get("icc_profile"), quality=90, subsampling=1, optimize=True)
+        #     img.close()
         if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
             print("Calculating new checksum")
 
