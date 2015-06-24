@@ -2,13 +2,14 @@ from setuptools import setup, find_packages
 
 setup(
     name='rename_files',
-    version='0.3.7',
-    packages=find_packages(),
+    version='0.4a0',
+    packages=['rename_files', 'rename_files.gui_datafiles'],
     url='https://github.com/cavpp/rename_files',
     license='GPL',
-    install_requires=['setuptools >= 14.3.1','PySide >= 1.2.2', 'Pillow >=2.8.1'],
+    install_requires=['setuptools >= 14.3.1', 'Pillow >=2.8.1'],
     author='California Audio Visual Preservation Project',
     author_email='hborcher@berkeley.edu',
+    zip_safe=False,
     description='Renames image files from a folder to CAVPP naming scheme',
     entry_points={'console_scripts': ['renameimages = rename_files.batch_renamer:main']}
 )

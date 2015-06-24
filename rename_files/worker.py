@@ -6,20 +6,20 @@ __author__ = 'California Audio Visual Preservation Project'
 
 # from PySide.QtGui import *
 # from PySide.QtCore import *
+
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 # from PIL import Image, ImageQt
 from rename_files.renaming_model import RenameFactory, NameRecord
 
 
-
 class Worker(QThread):
-    updateStatus = Signal(str)
-    reporter = Signal(NameRecord)
-    reset_progress = Signal(int)
-    update_progress = Signal(int)
-    request_report = Signal()
-    error_reporter = Signal(str)
+    updateStatus = pyqtSignal(str)
+    reporter = pyqtSignal(NameRecord)
+    reset_progress = pyqtSignal(int)
+    update_progress = pyqtSignal(int)
+    request_report = pyqtSignal()
+    error_reporter = pyqtSignal(str)
 
 
 
