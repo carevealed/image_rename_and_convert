@@ -45,9 +45,12 @@ def initial_setup(gui):
                     question = input("I couldn't open the database. Should I create a new one? y/[N]")
                     if question.lower() == "y" or question.lower() == "yes":
                         make_new_database = True
+                        valid = True
 
                     elif question.lower() == "n" or question.lower() == "no" or question == "":
                         make_new_database = False
+                        valid = True
+                        valid = True
 
             if make_new_database:
                 # create new database
