@@ -1,8 +1,8 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='rename_files',
-    version='0.4a1',
+    name='rename_and_convert_images',
+    version='0.4a2',
     packages=['rename_files', 'rename_files.gui_datafiles'],
     url='https://github.com/cavpp/rename_files',
     license='GPL',

@@ -1,6 +1,7 @@
 
 import argparse
 import sys
+from PyQt4 import QtGui
 import sqlite3
 from rename_files.cli import *
 from rename_files.gui import *
@@ -9,7 +10,7 @@ from rename_files.gui import *
 # import rename_files.gui
 datafile = "data.db"
 
-def initial_setup():
+def initial_setup(gui):
     if os.path.exists(datafile):
         print("Found database file: {}".format(os.path.abspath(datafile)))
         test1 = sqlite3.connect(os.path.abspath(datafile))
@@ -23,70 +24,94 @@ def initial_setup():
             pass
         except sqlite3.OperationalError:
             valid = False
-            while not valid:
-                question = input("I couldn't open the database. Should I create a new one? y/[N]")
-                if question.lower() == "y" or question.lower() == "yes":
-                    # create new database
-                    # Clear anything out if already exist
-                    test1.execute('DROP TABLE IF EXISTS jobs;')
-                    test1.execute('DROP TABLE IF EXISTS records;')
-                    test1.execute('DROP TABLE IF EXISTS files;')
-                    test1.execute('DROP TABLE IF EXISTS file_pairs;')
+            make_new_database = False
+            if gui:
+                message = "The required data file was not found.\n\nIf this is your first time running the script, " \
+                          "you'll have to create a new one before you can start.\n\nWould you like to create one now?"
+                app =QtGui.QApplication(sys.argv)
+                reply = QtGui.QMessageBox.question(QtGui.QWidget(), "Data file not found", message, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Cancel)
+                if reply == QtGui.QMessageBox.Ok:
+                    make_new_database = True
+                elif reply == QtGui.QMessageBox.Cancel:
+                    make_new_database = False
+                else:
+                    make_new_database = False
+                # w.show()
 
-                    # jobs table
-                    test1.execute('CREATE TABLE jobs('
-                                  'job_id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 1 NOT NULL, '
-                                  'username VARCHAR(255) );')
-                    # records table
-                    test1.execute('CREATE TABLE records('
-                                  'record_id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 1 NOT NULL,'
-                                  'job_id INTEGER,'
-                                  'project_id_prefix VARCHAR(10),'
-                                  'project_id_number INTEGER,'
-                                  'object_id_prefix VARCHAR(10),'
-                                  'object_id_number INTERGER,'
-                                  'ia_url VARCHAR(512),'
-                                  'FOREIGN KEY(job_id) REFERENCES jobs(job_id));')
+                # app.exec_()
+
+            else:
+                while not valid:
+                    question = input("I couldn't open the database. Should I create a new one? y/[N]")
+                    if question.lower() == "y" or question.lower() == "yes":
+                        make_new_database = True
+
+                    elif question.lower() == "n" or question.lower() == "no" or question == "":
+                        make_new_database = False
+
+            if make_new_database:
+                # create new database
+                # Clear anything out if already exist
+                test1.execute('DROP TABLE IF EXISTS jobs;')
+                test1.execute('DROP TABLE IF EXISTS records;')
+                test1.execute('DROP TABLE IF EXISTS files;')
+                test1.execute('DROP TABLE IF EXISTS file_pairs;')
+
+                # jobs table
+                test1.execute('CREATE TABLE jobs('
+                              'job_id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 1 NOT NULL, '
+                              'username VARCHAR(255) );')
+                # records table
+                test1.execute('CREATE TABLE records('
+                              'record_id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 1 NOT NULL,'
+                              'job_id INTEGER,'
+                              'project_id_prefix VARCHAR(10),'
+                              'project_id_number INTEGER,'
+                              'object_id_prefix VARCHAR(10),'
+                              'object_id_number INTERGER,'
+                              'ia_url VARCHAR(512),'
+                              'FOREIGN KEY(job_id) REFERENCES jobs(job_id));')
 
 
 
-                                  # 'FOREIGN KEY(record_id) REFERENCES records(record_id));')
+                              # 'FOREIGN KEY(record_id) REFERENCES records(record_id));')
 
-                    # file_pair
-                    test1.execute('CREATE TABLE file_pairs('
-                                  'pair_id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 1 NOT NULL, '
-                                  'source_id INTEGER,'
-                                  'destination_id INTEGER,'
-                                  'record_id INTEGER, '
-                                  'FOREIGN KEY(record_id) REFERENCES records(record_id),'
-                                  'FOREIGN KEY(source_id) REFERENCES files(file_id)'
-                                  ')')
-                    # files table
-                    test1.execute('CREATE TABLE files('
-                                  'file_id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 1 NOT NULL, '
-                                  # 'record_id INTEGER,'
-                                  'file_name VARCHAR(255),  '
-                                  'file_location VARCHAR(255),'
-                                  'source VARCHAR(255),'
-                                  'type VARCHAR(20),'
-                                  # 'destination VARCHAR(255),'
-                                  'date_renamed DATE,'
-                                  'md5 VARCHAR(32),'
-                                  'destination_id INTEGER,'
-                                  'file_suffix VARCHAR(20),'
-                                  'file_extension VARCHAR(4),'
-                                  'file_notes TEXT, '
-                                  'FOREIGN KEY(destination_id) REFERENCES file_pairs(pair_id)'
-                                  ')')
+                # file_pair
+                test1.execute('CREATE TABLE file_pairs('
+                              'pair_id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 1 NOT NULL, '
+                              'source_id INTEGER,'
+                              'destination_id INTEGER,'
+                              'record_id INTEGER, '
+                              'FOREIGN KEY(record_id) REFERENCES records(record_id),'
+                              'FOREIGN KEY(source_id) REFERENCES files(file_id)'
+                              ')')
+                # files table
+                test1.execute('CREATE TABLE files('
+                              'file_id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 1 NOT NULL, '
+                              # 'record_id INTEGER,'
+                              'file_name VARCHAR(255),  '
+                              'file_location VARCHAR(255),'
+                              'source VARCHAR(255),'
+                              'type VARCHAR(20),'
+                              # 'destination VARCHAR(255),'
+                              'date_renamed DATE,'
+                              'md5 VARCHAR(32),'
+                              'destination_id INTEGER,'
+                              'file_suffix VARCHAR(20),'
+                              'file_extension VARCHAR(4),'
+                              'file_notes TEXT, '
+                              'FOREIGN KEY(destination_id) REFERENCES file_pairs(pair_id)'
+                              ')')
 
-                    test1.close()
-                    valid = True
-                    pass
-                if question.lower() == "n" or question.lower() == "no" or question == "":
-                    print("Okay! Quitting")
-                    test1.close()
-                    quit()
-
+                test1.close()
+                valid = True
+                if gui:
+                    QtGui.QMessageBox.information(QtGui.QWidget(),"Success", "File created")
+                pass
+            else:
+                print("Okay! Quitting")
+                test1.close()
+                quit()
 
 
     else:
@@ -151,7 +176,7 @@ def main():
         remove_database()
         quit()
     if not found_data_file():
-        initial_setup()
+        initial_setup(args.gui)
 
     if args.source and not args.gui:
         print("Starting CLI mode")
