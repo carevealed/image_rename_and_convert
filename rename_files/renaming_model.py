@@ -10,7 +10,7 @@ import shutil
 import sys
 from PIL import Image, ImageFile, ImageFilter
 import copy
-
+from collections import namedtuple
 
 @unique
 class running_mode(Enum):
@@ -67,6 +67,7 @@ class Singleton(type):
             cls._instance = super(Singleton, cls).__call__(*args, **kwargs)
         return cls._instance
 
+
 class NameRecord(object):
     '''
     Contains the information per each file being converted. The files and project information
@@ -78,9 +79,10 @@ class NameRecord(object):
 
         # TODO: IF you want to make complex, here is where do it
         for file in files.files:
-            # if os.path.splitext(file)[1] == ".tif":
-            #     file['make_access'] = True
-            file['id'] = self.file_local_id
+
+
+            # file_data.id = self.file_local_id
+            file['id'] = self.file_local_id  # OLD WAY
             if file['file_status'] == FileStatus.IGNORE:
                 file['output_filename'] = ""
             # elif file['file_status'] == FileStatus.NEEDS_TO_BE_COPIED:
@@ -132,12 +134,12 @@ class NameRecord(object):
         self._status = RecordStatus.NEED_TO_APPEND_RECORD
 
     def _calculate_md5(self, file_name):
+        raise DeprecationWarning
         BUFFER = 8192
         md5 = hashlib.md5()
         with open(file_name, 'rb') as f:
             for chunk in iter(lambda: f.read(BUFFER), b''):
                 md5.update(chunk)
-        raise DeprecationWarning
         return md5.hexdigest()
 
     def __str__(self):
