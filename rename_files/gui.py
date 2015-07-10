@@ -483,20 +483,20 @@ class MainDialog(QDialog, Ui_Form):
             else:
                 project_id = ""
 
-            record = QTreeWidgetItem(self.tree_files, ["", "", str(queue.files[0]["id"]), project_id, simple])
+            record = QTreeWidgetItem(self.tree_files, ["", "", str(queue.files[0].id), project_id, simple])
             queue_id = str(queue.queue)
             for file in queue.files:
 
                 included = "Included"
-                if not file['included']:
+                if not file.included:
                     included = "Excluded"
                     # file['filename'] = ""
                 if not queue.isSimple:
-                    files.append(QTreeWidgetItem(record, ["", "", str(file["id"]), file["source"], file['filename'], included]))
-                old_names = os.path.basename(file['source']) + " "
-                if file['included']:
-                    new_name = os.path.basename(file['filename']) + " "
-                    dummy = QTreeWidgetItem(record, ["", queue_id, str(file["id"]), '','', '', new_name])
+                    files.append(QTreeWidgetItem(record, ["", "", str(file.id), file.source, file.filename, included]))
+                old_names = os.path.basename(file.source) + " "
+                if file.included:
+                    new_name = os.path.basename(file.filename) + " "
+                    dummy = QTreeWidgetItem(record, ["", queue_id, str(file.id), '','', '', new_name])
 
                     record.addChild(dummy)
             record.setText(1, queue_id)

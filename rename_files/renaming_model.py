@@ -8,6 +8,7 @@ from os.path import expanduser
 import sqlite3
 import shutil
 import sys
+import types
 from PIL import Image, ImageFile, ImageFilter
 import copy
 from collections import namedtuple
@@ -82,14 +83,23 @@ class NameRecord(object):
 
 
             # file_data.id = self.file_local_id
-            file['id'] = self.file_local_id  # OLD WAY
-            if file['file_status'] == FileStatus.IGNORE:
-                file['output_filename'] = ""
-            # elif file['file_status'] == FileStatus.NEEDS_TO_BE_COPIED:
+            file.id = self.file_local_id
+            if file.file_status == FileStatus.IGNORE:
+                file.output_filename = ""
+            # elif file.file_status == FileStatus.NEEDS_TO_BE_COPIED:
             else:
-                ending = "_" + str(file['file_suffix']) + file['file_extension']
-                file['output_filename'] = obj_prefix + "_" + str(obj_num).zfill(6) + ending
-                file['included'] = included
+                ending = "_" + str(file.file_suffix) + file.file_extension
+                file.output_filename = obj_prefix + "_" + str(obj_num).zfill(6) + ending
+                file.included = included
+
+            # file['id'] = self.file_local_id  # OLD WAY
+            # if file['file_status'] == FileStatus.IGNORE:
+            #     file['output_filename'] = ""
+            # elif file['file_status'] == FileStatus.NEEDS_TO_BE_COPIED:
+            # else:
+            #     ending = "_" + str(file['file_suffix']) + file['file_extension']
+            #     file['output_filename'] = obj_prefix + "_" + str(obj_num).zfill(6) + ending
+            #     file['included'] = included
             NameRecord.file_local_id += 1
             # file['md5'] = self._calculate_md5(file['old'])
 
@@ -217,10 +227,10 @@ class RenameFactory(object):
                 queue.project_id = proj_prefix + "_" + str(queue.project_id_number).zfill(6)
                 queue.ia_url = 'https://archive.org/details/' + queue.object_id
                 for file in queue.files:
-                    filename = queue.object_id + "_" + file['file_suffix'] + file['file_extension']
-                    file['included'] = True
-                    file['filename'] = os.path.join(path, filename)
-                    file['output_filename'] = filename
+                    filename = queue.object_id + "_" + file.file_suffix + file.file_extension
+                    file.included = True
+                    file.filename = os.path.join(path, filename)
+                    file.output_filename = filename
                 queue_count += 1
             else:
                 queue.object_id_number = None
@@ -232,9 +242,9 @@ class RenameFactory(object):
                 queue.ia_url = None
                 for file in queue.files:
                     filename = None
-                    file['included'] = False
-                    file['filename'] = None
-                    file['output_filename'] = None
+                    file.included = False
+                    file.filename = None
+                    file.output_filename = None
 
 
 
@@ -255,14 +265,14 @@ class RenameFactory(object):
             files = record_bundle(object_id_prefix=obj_marc, object_id_number=obj_start_num+object_count, path=path)
             excluded_files = record_bundle(object_id_prefix=obj_marc, object_id_number=obj_start_num+object_count, path=path)
             for file in old_queue.files:
-                if file['included'] == True:
+                if file.included == True:
 
                     # files.add_file(file['old'])
-                    if file['file_type'] == FileTypes.MASTER:
-                        files.add_file2(file['source'], file_type_to_create=file['file_type'])
+                    if file.file_type == FileTypes.MASTER:
+                        files.add_file2(file.source, file_type_to_create=file.file_type)
 
-                    if file['file_type'] == FileTypes.ACCESS:
-                        files.add_file2(file['source'], file_type_to_create=file['file_type'], new_format=file['file_extension'])
+                    if file.file_type == FileTypes.ACCESS:
+                        files.add_file2(file.source, file_type_to_create=file.file_type, new_format=file.file_extension)
 
             if len(files) > 0:
                 new_queue = NameRecord(files=files,
@@ -328,7 +338,7 @@ class RenameFactory(object):
     def find_file(self, file_id):
         for queue in self._queues:
             for file in queue.files:
-                if file['id'] == file_id:
+                if file.id == file_id:
                     return file
 
     def find_queue(self, queue_number):
@@ -369,7 +379,7 @@ class RenameFactory(object):
             if queue.queue == queue_id:
                 for file in queue.files:
                     # print("From {} to {} for {}".format(file['included'], include, file))
-                    file['included'] = include
+                    file.included = include
 
                     found_it = True
 
@@ -389,48 +399,48 @@ class RenameFactory(object):
         record.set_Working()
         temp_files = []
         for file in record.files:
-            if file['file_status'] == FileStatus.NEEDS_TO_BE_CREATED or file['file_status'] == FileStatus.NEEDS_TO_BE_COPIED:
+            if file.file_status == FileStatus.NEEDS_TO_BE_CREATED or file.file_status == FileStatus.NEEDS_TO_BE_COPIED:
                 new_file = copy.copy(file)
                 # new_path = os.path.split(file['new'])[0]
                 if not os.path.exists(self.new_path):
                     os.makedirs(self.new_path)
                 record.set_Working()
-                if file['file_status'] == FileStatus.NEEDS_TO_BE_COPIED:
+                if file.file_status == FileStatus.NEEDS_TO_BE_COPIED:
                     if MODE == running_mode.DEBUG or MODE == running_mode.BUILD or print_status:
-                        print("Copying {0} to {1}.".format(file['source'], file['filename']), end="")
-                    destination = os.path.join(self.new_path, file['output_filename'])
-                    shutil.copy2(file['source'], destination)
-                    if filecmp.cmp(file['source'], destination):
+                        print("Copying {0} to {1}.".format(file.source, file.filename), end="")
+                    destination = os.path.join(self.new_path, file.output_filename)
+                    shutil.copy2(file.source, destination)
+                    if filecmp.cmp(file.source, destination):
                         if MODE == running_mode.DEBUG or MODE == running_mode.BUILD or print_status:
                             print("  ... Success!")
 
-                        new_file['file_status'] = FileStatus.NEEDS_A_RECORD
-                        new_file['file_extension'] = os.path.splitext(destination)[1]
-                        new_file['file_path'] = os.path.split(destination)[0]
-                        new_file['file_suffix'] = file['file_suffix']
-                        new_file['file_type'] = file['file_type']
-                        new_file['filename'] = os.path.basename(destination)
-                        new_file['md5'] = self._calculate_md5(destination)
+                        new_file.file_status = FileStatus.NEEDS_A_RECORD
+                        new_file.file_extension = os.path.splitext(destination)[1]
+                        new_file.file_path = os.path.split(destination)[0]
+                        new_file.file_suffix = file.file_suffix
+                        new_file.file_type = file.file_type
+                        new_file.filename = os.path.basename(destination)
+                        new_file.md5 = self._calculate_md5(destination)
 
                         record.set_NeedsUpdating()
                     else:
                         sys.stderr.write("Failed!\n")
-                        raise IOError("File {0} does not match {1]".format(file['source'], file['filename']))
-                elif file['file_status'] == FileStatus.NEEDS_TO_BE_CREATED:
+                        raise IOError("File {0} does not match {1]".format(file.source, file.filename))
+                elif file.file_status == FileStatus.NEEDS_TO_BE_CREATED:
                     if MODE == running_mode.DEBUG or MODE == running_mode.BUILD or print_status:
-                        print("Converting {0} to {1}.".format(file['source'], file['filename']), end="")
+                        print("Converting {0} to {1}.".format(file.source, file.filename), end="")
                     new_file = self.convert_format(file)
 
-                    if os.path.exists(os.path.join(new_file['file_path'], new_file['filename'])):
+                    if os.path.exists(os.path.join(new_file.file_path, new_file.filename)):
                         if MODE == running_mode.DEBUG or MODE == running_mode.BUILD or print_status:
                             print("  ... Success!")
                     else:
                         sys.stderr.write("Failed to convert!\n")
-                        raise IOError("File {} was not found after being converted from {}".format(new_file['filename'], file['source']))
+                        raise IOError("File {} was not found after being converted from {}".format(new_file.filename, file.source))
                 # FIXME!!!
-                file['md5'] = self._calculate_md5(file['source'])
-                file['file_suffix'] = None
-                file['file_type'] = FileTypes.ORIGINAL
+                file.md5 = self._calculate_md5(file.source)
+                file.file_suffix = None
+                file.file_type = FileTypes.ORIGINAL
                 temp_files.append(file)
                 temp_files.append(new_file)
                 destination = None
@@ -455,10 +465,10 @@ class RenameFactory(object):
         pass
 
     def convert_format(self, file):
-        new_file = file.copy()
+        new_file = copy.copy(file)
         if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
-            print("converting {}".format(file['source']))
-        img = Image.open(file['source'])
+            print("converting {}".format(file.source))
+        img = Image.open(file.source)
         if img.mode == '1':
             # blur the image to make it compress better
             img = img.convert('RGB')
@@ -467,7 +477,12 @@ class RenameFactory(object):
 
 
             # raise AmbiguousMode(file['source'])
-        img.save(os.path.join(self.new_path, file['output_filename']), 'jpeg', icc_profile=img.info.get("icc_profile"), quality=90, subsampling=1, progressive=True)
+        img.save(os.path.join(self.new_path, file.output_filename),
+                 'jpeg',
+                 icc_profile=img.info.get("icc_profile"),
+                 quality=90,
+                 subsampling=1,
+                 progressive=True)
         img.close()
         # except IOError:
         #     img = Image.open(file['source'])
@@ -476,13 +491,13 @@ class RenameFactory(object):
         if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
             print("Calculating new checksum")
 
-        new_file['filename'] = file['output_filename']
-        new_file['md5'] = self._calculate_md5(os.path.join(self.new_path, file['output_filename']))
-        new_file['file_path'] = self.new_path
-        new_file['file_suffix'] = "access"
-        new_file['file_extension'] = os.path.splitext(file['output_filename'])[1]
-        new_file['file_status'] = FileStatus.DERIVED
-        new_file['file_type'] = FileTypes.ACCESS
+        new_file.filename = file.output_filename
+        new_file.md5 = self._calculate_md5(os.path.join(self.new_path, file.output_filename))
+        new_file.file_path = self.new_path
+        new_file.file_suffix = "access"
+        new_file.file_extension = os.path.splitext(file.output_filename)[1]
+        new_file.file_status = FileStatus.DERIVED
+        new_file.file_type = FileTypes.ACCESS
 
 
         return new_file
@@ -593,7 +608,13 @@ class ReportFactory(metaclass=Singleton):
             self._database.execute('INSERT INTO files('
                                    'type, file_name, file_location, md5, file_suffix, file_extension, destination_id) '
                                    'VALUES(?,?,?,?,?,?,?)',
-                                   (file["file_type"].value, file['source'], file['filename'], file['md5'], file["file_suffix"], os.path.splitext(file['filename'])[1], record_id))
+                                   (file.file_type.value,
+                                    file.source,
+                                    file.filename,
+                                    file.md5,
+                                    file.file_suffix,
+                                    os.path.splitext(file.filename)[1],
+                                    record_id))
             # source_id = self._database.execute('SELECT LAST_INSERT_ROWID()').fetchone()['LAST_INSERT_ROWID()']
             # self._database.execute('UPDATE file_pairs'
             #                        'set record_id, source_id) '
@@ -614,11 +635,11 @@ class ReportFactory(metaclass=Singleton):
         access = []
         for file in record.files:
             #FIXME: Something is getting mislabled as a access file after being copyied
-            if file["file_type"] == FileTypes.MASTER:
+            if file.file_type == FileTypes.MASTER:
                 master = file
-            elif file["file_type"] == FileTypes.ACCESS:
+            elif file.file_type == FileTypes.ACCESS:
                 access.append(file)
-            elif file["file_type"] == FileTypes.ORIGINAL:
+            elif file.file_type == FileTypes.ORIGINAL:
                 original = file
             else:
                 raise ValueError
@@ -629,12 +650,12 @@ class ReportFactory(metaclass=Singleton):
         # add original into database
         query = 'INSERT INTO files '
         query += '(type, file_name, file_location, md5, file_suffix, file_extension) '
-        query += 'VALUES("{}", "{}", "{}", "{}", "{}", "{}")'.format(original["file_type"].value,
-                                                                     original['source'],
-                                                                     original['file_path'],
-                                                                     original['md5'],
-                                                                     original["file_suffix"],
-                                                                     os.path.splitext(master['filename'])[1])
+        query += 'VALUES("{}", "{}", "{}", "{}", "{}", "{}")'.format(original.file_type.value,
+                                                                     original.source,
+                                                                     original.file_path,
+                                                                     original.md5,
+                                                                     original.file_suffix,
+                                                                     os.path.splitext(master.filename)[1])
         self._database.execute(query)
 
         source_id = self._database.execute('SELECT LAST_INSERT_ROWID()').fetchone()['LAST_INSERT_ROWID()']
@@ -643,12 +664,12 @@ class ReportFactory(metaclass=Singleton):
         # Add master into database
         query = 'INSERT INTO files '
         query += '(type, file_name, file_location, md5, file_suffix, file_extension, source) '
-        query += 'VALUES("{}", "{}", "{}", "{}", "{}", "{}", "{}")'.format(master["file_type"].value,
-                                                                           master['filename'],
-                                                                           master['file_path'],
-                                                                           master['md5'],
-                                                                           master["file_suffix"],
-                                                                           os.path.splitext(master['filename'])[1],
+        query += 'VALUES("{}", "{}", "{}", "{}", "{}", "{}", "{}")'.format(master.file_type.value,
+                                                                           master.filename,
+                                                                           master.file_path,
+                                                                           master.md5,
+                                                                           master.file_suffix,
+                                                                           os.path.splitext(master.filename)[1],
                                                                            source_id)
         self._database.execute(query)
         self._database.execute('INSERT INTO file_pairs('
@@ -660,12 +681,13 @@ class ReportFactory(metaclass=Singleton):
                 print("File: {}".format(master))
             query = 'INSERT INTO files '
             query += '(type, file_name, file_location, md5, file_suffix, file_extension, source) '
-            query += 'VALUES("{}", "{}", "{}", "{}", "{}", "{}", "{}")'.format(access_file["file_type"].value,
-                                                                               access_file['filename'],
-                                                                               access_file['file_path'],
-                                                                               access_file['md5'],
-                                                                               access_file["file_suffix"],
-                                                                               os.path.splitext(access_file['filename'])[1],
+            query += 'VALUES("{}", "{}", "{}", "{}", "{}", "{}", "{}")'.format(access_file.file_type.value,
+                                                                               access_file.filename,
+                                                                               access_file.file_path,
+                                                                               access_file.md5,
+                                                                               access_file.file_suffix,
+                                                                               os.path.splitext(access_file.filename)[1],
+                                                                               os.path.splitext(access_file.filename)[1],
                                                                                source_id)
             self._database.execute(query)
         self._database.commit()
@@ -794,15 +816,26 @@ class record_bundle(object):
 
             if not new_file_name:
                 new_file_name = self.generate_CAVPP_name(object_prefix=self.object_id_prefix, file_name=file_name, suffix="prsv")
-            file_to_add = dict({"filename": new_file_name,
-                                "file_path": os.path.split(file_name)[0],
-                                "file_type": FileTypes.MASTER,
-                                "source": file_name,
-                                "md5": self._calculate_md5(file_name),
-                                "included": include,
-                                "file_suffix": "prsv",
-                                "file_extension": os.path.splitext(file_name)[1],
-                                "file_status": status})
+
+            file_to_add_ = types.SimpleNamespace(filename=new_file_name,
+                                                 file_path=os.path.split(file_name)[0],
+                                                 file_type=FileTypes.MASTER,
+                                                 source=file_name,
+                                                 md5=self._calculate_md5(file_name),
+                                                 included=include,
+                                                 file_suffix="prsv",
+                                                 file_extension=os.path.splitext(file_name)[1],
+                                                 file_status=status)
+            # old style
+            # file_to_add = dict({"filename": new_file_name,
+            #                     "file_path": os.path.split(file_name)[0],
+            #                     "file_type": FileTypes.MASTER,
+            #                     "source": file_name,
+            #                     "md5": self._calculate_md5(file_name),
+            #                     "included": include,
+            #                     "file_suffix": "prsv",
+            #                     "file_extension": os.path.splitext(file_name)[1],
+            #                     "file_status": status})
 
         elif file_type_to_create == FileTypes.ACCESS:
             if new_format:
@@ -816,18 +849,31 @@ class record_bundle(object):
             #     status = FileStatus.IGNORE
             if not new_file_name:
                 new_file_name = self.generate_CAVPP_name(object_prefix=self.object_id_prefix, file_name=file_name, suffix="access", extension=file_extension)
-            file_to_add = dict({"filename": new_file_name,
-                                "file_path": os.path.split(file_name)[0],
-                                "file_type": FileTypes.ACCESS,
-                                "source": file_name,
-                                "md5": None,
-                                "included": include,
-                                "file_suffix": "access",
-                                "file_extension": file_extension,
-                                "file_status": status})
+            file_to_add_ = types.SimpleNamespace(filename=new_file_name,
+                                                 file_path=os.path.split(file_name)[0],
+                                                 file_type=FileTypes.ACCESS,
+                                                 source=file_name,
+                                                 md5=None,
+                                                 included=include,
+                                                 file_suffix="access",
+                                                 file_extension=file_extension,
+                                                 file_status=status)
+
+
+
+            # old style
+            # file_to_add = dict({"filename": new_file_name,
+            #                     "file_path": os.path.split(file_name)[0],
+            #                     "file_type": FileTypes.ACCESS,
+            #                     "source": file_name,
+            #                     "md5": None,
+            #                     "included": include,
+            #                     "file_suffix": "access",
+            #                     "file_extension": file_extension,
+            #                     "file_status": status})
         else:
             raise ValueError("file_type must be a FileTypes type")
-        self._files.append(file_to_add)
+        self._files.append(file_to_add_)
 
     # pass
 
