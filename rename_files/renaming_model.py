@@ -502,17 +502,21 @@ class ReportFactory(metaclass=Singleton):
     This class is a singleton to avoid conflicts with writing and accessing the database.
     '''
     # _instance = None
-    _database = sqlite3.connect('data.db')
+    # _database = sqlite3.connect('data.db')
+    _database = None
 
     # def __new__(cls, *args, **kwargs):
     #     if not cls._instance:
     #         cls._instance = super(ReportFactory, cls).__new__(cls, *args, **kwargs)
     #     return cls._instance
-    def __init__(self, username=None):
+    def __init__(self, database, username=None):
+        if database is None:
+            raise ValueError("Database cannot be None")
         if username:
             self.username = username
         else:
             self.username = ""
+        self._database = sqlite3.connect(database)
         self.database = []
         self._database.row_factory = dict_factory
         self._current_batch = 0

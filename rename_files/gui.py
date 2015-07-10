@@ -34,7 +34,9 @@ class running_mode(Enum):
     DEBUG = 1
     BUIDING = 2
     TESTING = 3
+
 MODE = running_mode.NORMAL
+datafile = None
 
 if not MODE == running_mode.TESTING:
     from rename_files.gui_datafiles.rename_gui import Ui_Form
@@ -64,7 +66,7 @@ class MainDialog(QDialog, Ui_Form):
         self._pid_startNum = 0
         self._oid_marc = ""
         self._oid_startNum = 0
-        self.reporter = ReportFactory(username="asd")  # TODO: add Username input
+        self.reporter = ReportFactory(database=datafile, username="asd")  # TODO: add Username input
         self.copyEngine = Worker(self._destination)
         self.reporter.initize_database()
 
@@ -605,7 +607,7 @@ class ReportDialog(QDialog, Ui_dlg_report):
         self.job_number = jobNumber
         self.job_record = None
 
-        self.database = ReportFactory()
+        self.database = ReportFactory(database=datafile)
 
         self.load_data()
 
@@ -628,7 +630,9 @@ class ReportDialog(QDialog, Ui_dlg_report):
             self.tableWidget.setItem(row, 5, QTableWidgetItem(record['ia_url']))
 
 
-def start_gui(folder=None):
+def start_gui(database, folder=None):
+    global datafile
+    datafile = database
     app = QApplication(sys.argv)
     if folder and folder != "":
         if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
@@ -641,6 +645,6 @@ def start_gui(folder=None):
     app.exec_()
 
 
-
 if __name__ == '__main__':
-    start_gui()
+    sys.stderr.write("Not a runnable script. Run batch_renamer.py instead.\n")
+    pass

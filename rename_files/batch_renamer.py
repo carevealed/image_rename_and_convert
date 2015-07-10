@@ -8,7 +8,8 @@ from rename_files.gui import *
 # from rename_files import start_gui
 
 # import rename_files.gui
-datafile = "data.db"
+this_dir, this_filename = os.path.split(__file__)
+datafile = os.path.join(this_dir, "data", "data.db")
 
 def initial_setup(gui):
     if os.path.exists(datafile):
@@ -42,7 +43,7 @@ def initial_setup(gui):
 
             else:
                 while not valid:
-                    question = input("I couldn't open the database. Should I create a new one? y/[N]")
+                    question = input("I couldn't open the database or is not valid. Should I create a new one? y/[N]")
                     if question.lower() == "y" or question.lower() == "yes":
                         make_new_database = True
                         valid = True
@@ -53,60 +54,7 @@ def initial_setup(gui):
                         valid = True
 
             if make_new_database:
-                # create new database
-                # Clear anything out if already exist
-                test1.execute('DROP TABLE IF EXISTS jobs;')
-                test1.execute('DROP TABLE IF EXISTS records;')
-                test1.execute('DROP TABLE IF EXISTS files;')
-                test1.execute('DROP TABLE IF EXISTS file_pairs;')
-
-                # jobs table
-                test1.execute('CREATE TABLE jobs('
-                              'job_id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 1 NOT NULL, '
-                              'username VARCHAR(255) );')
-                # records table
-                test1.execute('CREATE TABLE records('
-                              'record_id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 1 NOT NULL,'
-                              'job_id INTEGER,'
-                              'project_id_prefix VARCHAR(10),'
-                              'project_id_number INTEGER,'
-                              'object_id_prefix VARCHAR(10),'
-                              'object_id_number INTERGER,'
-                              'ia_url VARCHAR(512),'
-                              'FOREIGN KEY(job_id) REFERENCES jobs(job_id));')
-
-
-
-                              # 'FOREIGN KEY(record_id) REFERENCES records(record_id));')
-
-                # file_pair
-                test1.execute('CREATE TABLE file_pairs('
-                              'pair_id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 1 NOT NULL, '
-                              'source_id INTEGER,'
-                              'destination_id INTEGER,'
-                              'record_id INTEGER, '
-                              'FOREIGN KEY(record_id) REFERENCES records(record_id),'
-                              'FOREIGN KEY(source_id) REFERENCES files(file_id)'
-                              ')')
-                # files table
-                test1.execute('CREATE TABLE files('
-                              'file_id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 1 NOT NULL, '
-                              # 'record_id INTEGER,'
-                              'file_name VARCHAR(255),  '
-                              'file_location VARCHAR(255),'
-                              'source VARCHAR(255),'
-                              'type VARCHAR(20),'
-                              # 'destination VARCHAR(255),'
-                              'date_renamed DATE,'
-                              'md5 VARCHAR(32),'
-                              'destination_id INTEGER,'
-                              'file_suffix VARCHAR(20),'
-                              'file_extension VARCHAR(4),'
-                              'file_notes TEXT, '
-                              'FOREIGN KEY(destination_id) REFERENCES file_pairs(pair_id)'
-                              ')')
-
-                test1.close()
+                initialize_database(datafile)
                 valid = True
                 if gui:
                     QtGui.QMessageBox.information(QtGui.QWidget(),"Success", "File created")
@@ -118,26 +66,93 @@ def initial_setup(gui):
 
 
     else:
-        print("Nope")
+        sys.stderr.write("Database could not be initialized\n")
+        exit(-1)
 
 
-def remove_database():
+def initialize_database(dbfile):
+    '''
+
+    :param dbfile: str
+    :return:
+    '''
+    # create new database
+    # Clear anything out if already exist
+
+
+    database = sqlite3.connect(os.path.abspath(dbfile))
+    database.execute('DROP TABLE IF EXISTS jobs;')
+    database.execute('DROP TABLE IF EXISTS records;')
+    database.execute('DROP TABLE IF EXISTS files;')
+    database.execute('DROP TABLE IF EXISTS file_pairs;')
+    # jobs table
+    database.execute('CREATE TABLE jobs('
+                     'job_id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 1 NOT NULL, '
+                     'username VARCHAR(255) );')
+    # records table
+    database.execute('CREATE TABLE records('
+                     'record_id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 1 NOT NULL,'
+                     'job_id INTEGER,'
+                     'project_id_prefix VARCHAR(10),'
+                     'project_id_number INTEGER,'
+                     'object_id_prefix VARCHAR(10),'
+                     'object_id_number INTERGER,'
+                     'ia_url VARCHAR(512),'
+                     'FOREIGN KEY(job_id) REFERENCES jobs(job_id));')
+    # 'FOREIGN KEY(record_id) REFERENCES records(record_id));')
+    # file_pair
+    database.execute('CREATE TABLE file_pairs('
+                     'pair_id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 1 NOT NULL, '
+                     'source_id INTEGER,'
+                     'destination_id INTEGER,'
+                     'record_id INTEGER, '
+                     'FOREIGN KEY(record_id) REFERENCES records(record_id),'
+                     'FOREIGN KEY(source_id) REFERENCES files(file_id)'
+                     ')')
+    # files table
+    database.execute('CREATE TABLE files('
+                     'file_id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 1 NOT NULL, '
+                     # 'record_id INTEGER,'
+                     'file_name VARCHAR(255),  '
+                     'file_location VARCHAR(255),'
+                     'source VARCHAR(255),'
+                     'type VARCHAR(20),'
+                     # 'destination VARCHAR(255),'
+                     'date_renamed DATE,'
+                     'md5 VARCHAR(32),'
+                     'destination_id INTEGER,'
+                     'file_suffix VARCHAR(20),'
+                     'file_extension VARCHAR(4),'
+                     'file_notes TEXT, '
+                     'FOREIGN KEY(destination_id) REFERENCES file_pairs(pair_id)'
+                     ')')
+    database.close()
+
+
+def rebuild_database():
+    global datafile
     print("Cleaning up database.")
     if os.path.exists(datafile):
         print("{} found".format(datafile))
         valid_response = False
         while not valid_response:
-            response = input("Are you sure you want to remove it? y/[n]")
+            response = input("Are you sure you want to clear it and rebuild it? y/[n]")
             if response.lower() == 'y' or response.lower() == 'yes':
                 valid_response = True
-                print("Okay. Deleting {}".format(datafile))
-                os.remove(datafile)
-                if os.path.exists(datafile):
-                    sys.stderr.write("Error, Unable to remove file.")
-                    quit()
-                else:
-                    print("Done")
-                print("Cleaned")
+                print("Okay. Rebuilding {}".format(datafile))
+                # os.remove(datafile)
+                # if os.path.exists(datafile):
+                #     sys.stderr.write("Error, Unable to remove file.")
+                #     quit()
+                # else:
+                #     print("Done")
+
+                try:
+                    initialize_database(datafile)
+                except IOError:
+                    sys.stderr.write("Error: Cannot edit the file.\n")
+                    quit(-1)
+                print("Rebuilt")
             elif response.lower() == 'n' or response.lower() == 'no' or response.lower() == '':
                 valid_response = True
                 print("Okay. Canceling.")
@@ -176,7 +191,7 @@ def main():
 
     if args.cleanup:
 
-        remove_database()
+        rebuild_database()
         quit()
     if not found_data_file():
         initial_setup(args.gui)
@@ -192,14 +207,15 @@ def main():
                   object_id_start=args.object_id_start,
                   project_id_prefix=args.project_id_prefix,
                   project_id_start=args.project_id_start,
+                  database=datafile,
                   user=args.username)
 
     elif args.gui and args.source:
         print("Starting GUI mode with {}".format(args.source))
-        start_gui(folder=args.source)
+        start_gui(database=datafile, folder=args.source)
     elif args.gui:
         print("Starting GUI mode")
-        start_gui(folder=args.source)
+        start_gui(database=datafile, folder=args.source)
 
     else:
         print(parser.print_help())

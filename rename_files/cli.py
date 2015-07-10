@@ -14,7 +14,7 @@ class running_mode(Enum):
     DEBUG = 1
     BUILD = 2
 MODE = running_mode.NORMAL
-
+datafile = None
 
 def is_reponse_valid(response):
     if response.lower() == "q" or response.lower() == "quit":
@@ -250,6 +250,12 @@ def start_cli(**settings):
         else:
             needs_more_info = True
 
+        if 'database' in settings:
+            datafile = settings['database']
+            if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
+                print("Database: passed to CLI")
+        else:
+            raise TypeError("Missing database file")
         if 'object_id_prefix' in settings:
             object_id_prefix = settings['object_id_prefix']
             if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
@@ -383,7 +389,7 @@ def start_cli(**settings):
         else:
             print("Not a valid input. Please try again.")
 
-    reporter = rename_files.renaming_model.ReportFactory(username=user)
+    reporter = rename_files.renaming_model.ReportFactory(database=datafile, username=user)
     reporter.initize_database()
 
 
