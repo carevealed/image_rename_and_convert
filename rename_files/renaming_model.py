@@ -300,20 +300,23 @@ class RenameFactory(object):
         for index, old_queue in enumerate(sorted(self._queues, key=lambda x: x.queue)):
             included_files = []
             excluded_files = []
-            files = record_bundle(object_id_prefix=obj_marc, object_id_number=obj_start_num+object_count, path=path)
             excluded_files = record_bundle(object_id_prefix=obj_marc, object_id_number=obj_start_num+object_count, path=path)
-            for file in old_queue.files:
-                if file.included == True:
+            new_parts = []
+            for part in old_queue.parts:
+                new_part = record_bundle(object_id_prefix=obj_marc, object_id_number=obj_start_num+object_count, path=path)
+                for file in part:
+                    if file.included == True:
 
-                    # files.add_file(file['old'])
-                    if file.file_type == FileTypes.MASTER:
-                        files.add_file2(file.source, file_type_to_create=file.file_type)
+                        # files.add_file(file['old'])
+                        if file.file_type == FileTypes.MASTER:
+                            new_part.add_file2(file.source, file_type_to_create=file.file_type)
 
-                    if file.file_type == FileTypes.ACCESS:
-                        files.add_file2(file.source, file_type_to_create=file.file_type, new_format=file.file_extension)
+                        if file.file_type == FileTypes.ACCESS:
+                            new_part.add_file2(file.source, file_type_to_create=file.file_type, new_format=file.file_extension)
+                new_parts.append(new_part)
 
-            if len(files) > 0:
-                new_queue = NameRecord(parts=files,
+            if len(record) > 0:
+                new_queue = NameRecord(parts=new_parts,
                                        queue=queue_count,
                                        obj_prefix=obj_marc,
                                        obj_num=object_count+obj_start_num,
@@ -323,7 +326,7 @@ class RenameFactory(object):
                 object_count += 1
                 new_queues.append(new_queue)
             else:
-                files = record_bundle(object_id_prefix=obj_marc, object_id_number=obj_start_num+object_count, path=path)
+                record = record_bundle(object_id_prefix=obj_marc, object_id_number=obj_start_num+object_count, path=path)
                 for excluded_file in excluded_files.files:
                     file = record_bundle(path=path)
                     file_format = None
@@ -336,11 +339,11 @@ class RenameFactory(object):
                     else:
                         raise TypeError("Unsupported file format, {}".format(os.path.splitext(excluded_file)[1]))
                     if file_type == FileTypes.MASTER:
-                        files.add_file2(file_name=excluded_file, file_type_to_create=file_type, include=False)
+                        record.add_file2(file_name=excluded_file, file_type_to_create=file_type, include=False)
                     elif file_type == FileTypes.ACCESS:
-                        files.add_file2(file_name=excluded_file, file_type_to_create=file_type, include=False, new_format=file_format.value)
+                        record.add_file2(file_name=excluded_file, file_type_to_create=file_type, include=False, new_format=file_format.value)
 
-                new_queue = NameRecord(parts=files,
+                new_queue = NameRecord(parts=record,
                                        queue=queue_count,
                                        obj_prefix=obj_marc,
                                        obj_num=object_count+obj_start_num,
@@ -381,9 +384,10 @@ class RenameFactory(object):
 
     def find_file(self, file_id):
         for queue in self._queues:
-            for file in queue.files:
-                if file.id == file_id:
-                    return file
+            for part in queue.parts:
+                for file in part:
+                    if file.id == file_id:
+                        return file
 
     def find_queue(self, queue_number):
         for queue in self._queues:
@@ -421,11 +425,12 @@ class RenameFactory(object):
         for queue in self._queues:
 
             if queue.queue == queue_id:
-                for file in queue.files:
-                    # print("From {} to {} for {}".format(file['included'], include, file))
-                    file.included = include
+                for part in queue.parts:
+                    for file in part:
+                        # print("From {} to {} for {}".format(file['included'], include, file))
+                        file.included = include
 
-                    found_it = True
+                        found_it = True
 
                 if found_it:
                     queue.included = include

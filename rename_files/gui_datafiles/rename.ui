@@ -514,7 +514,7 @@
                <item row="1" column="2">
                 <widget class="QPushButton" name="pushButton_include">
                  <property name="enabled">
-                  <bool>true</bool>
+                  <bool>false</bool>
                  </property>
                  <property name="text">
                   <string>Include/Exclude</string>

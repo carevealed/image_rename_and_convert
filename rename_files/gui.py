@@ -147,7 +147,10 @@ class MainDialog(QDialog, Ui_Form):
         self.pushButton_include.clicked.connect(self._include_selection)
 
         self.pushButton_load_filles.clicked.connect(self._load_files_click)
+        self.pushButton_load_filles.clicked.connect(self._load_files_click)
         self.pushButton_update.clicked.connect(self.update_click)
+
+        self.pushButton_group.clicked.connect(self._group_selected)
 
         self.buttonRename.clicked.connect(self._copy_files)
 
@@ -173,7 +176,7 @@ class MainDialog(QDialog, Ui_Form):
                 item = self.tree_files.selectedItems()[0]
             file_id = int(item.text(2))
             # file_id
-            filename = self.copyEngine.builder.find_file(file_id)['source']
+            filename = self.copyEngine.builder.find_file(file_id).source
             # self.pixmap.load(filename)
 
             newimage = QPixmap(filename)
@@ -464,6 +467,20 @@ class MainDialog(QDialog, Ui_Form):
         if destination:
             self.load_destination(destination)
 
+    def _group_selected(self):
+        print("Making selection a complex object.")
+        to_group = []
+        for item in self.tree_files.selectedItems():
+            hasParent =item.parent()
+            if hasParent:
+                id = int(item.parent().text(1))
+            # parent = item.parent()
+            else:
+                id = int(item.text(1))
+            to_group.append(id)
+        print(to_group)
+        self.update_tree()
+
     def update_tree(self):
         records = []
         self.tree_files.clear()
@@ -578,6 +595,8 @@ class MainDialog(QDialog, Ui_Form):
                                                   proj_id_num=index + self._pid_startNum)
 
         self.buttonRename.setEnabled(True)
+        self.pushButton_group.setEnabled(True)
+        self.pushButton_include.setEnabled(True)
         self.update_tree()
 
     def update_click(self):
@@ -633,7 +652,7 @@ def start_gui(database, folder=None):
     global datafile
 
     datafile = database
-    sys.excepthook = excepthook
+    # sys.excepthook = excepthook
     app = QApplication(sys.argv)
     # error = QErrorMessage()
     # error.showMessage("error")

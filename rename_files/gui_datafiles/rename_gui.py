@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/Users/lpsdesk/PycharmProjects/rename_files/rename_files/gui_datafiles/rename.ui'
 #
-# Created: Wed Jun 24 15:53:48 2015
+# Created: Fri Jul 10 17:29:18 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -264,7 +264,7 @@ class Ui_Form(object):
         self.pushButton_group.setObjectName(_fromUtf8("pushButton_group"))
         self.gridLayout_2.addWidget(self.pushButton_group, 1, 1, 1, 1)
         self.pushButton_include = QtGui.QPushButton(self.frame_4)
-        self.pushButton_include.setEnabled(True)
+        self.pushButton_include.setEnabled(False)
         self.pushButton_include.setObjectName(_fromUtf8("pushButton_include"))
         self.gridLayout_2.addWidget(self.pushButton_include, 1, 2, 1, 1)
         self.pushButton_update = QtGui.QPushButton(self.frame_4)
