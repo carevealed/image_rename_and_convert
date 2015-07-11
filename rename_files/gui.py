@@ -1,3 +1,5 @@
+import datetime
+import time
 import threading
 from time import sleep
 
@@ -16,6 +18,7 @@ import argparse
 from enum import Enum
 import os
 from rename_files.renaming_controller import generate_report
+import traceback
 
 COLOR_MODES = dict({"1": "1-bit pixels, black and white, stored with one pixel per byte",
                     "L": "8-bit pixels, black and white",
@@ -38,6 +41,7 @@ class running_mode(Enum):
 MODE = running_mode.NORMAL
 datafile = None
 
+
 if not MODE == running_mode.TESTING:
     from rename_files.gui_datafiles.rename_gui import Ui_Form
 
@@ -50,7 +54,7 @@ class text_styles:
     VALID = "QWidget { background-color: rgb(200, 255, 200); }"
 
 class MainDialog(QDialog, Ui_Form):
-
+    halt_worker = pyqtSignal()
     def __init__(self, parent=None, folder=None):
         super(MainDialog, self).__init__(parent)
         self.setupUi(self)
@@ -483,32 +487,32 @@ class MainDialog(QDialog, Ui_Form):
             else:
                 project_id = ""
 
-            record = QTreeWidgetItem(self.tree_files, ["", "", str(queue.files[0].id), project_id, simple])
+            record = QTreeWidgetItem(self.tree_files, ["", "", str(queue.parts[0][0].id), project_id, simple])
             queue_id = str(queue.queue)
-            for file in queue.files:
+            for part in queue.parts:
+                for file in part:
+                    included = "Included"
+                    if not file.included:
+                        included = "Excluded"
+                        # file['filename'] = ""
+                    if not queue.isSimple:
+                        files.append(QTreeWidgetItem(record, ["", "", str(file.id), file.source, file.filename, included]))
+                    old_names = os.path.basename(file.source) + " "
+                    if file.included:
+                        new_name = os.path.basename(file.filename) + " "
+                        dummy = QTreeWidgetItem(record, ["", queue_id, str(file.id), '','', '', new_name])
 
-                included = "Included"
-                if not file.included:
-                    included = "Excluded"
-                    # file['filename'] = ""
-                if not queue.isSimple:
-                    files.append(QTreeWidgetItem(record, ["", "", str(file.id), file.source, file.filename, included]))
-                old_names = os.path.basename(file.source) + " "
-                if file.included:
-                    new_name = os.path.basename(file.filename) + " "
-                    dummy = QTreeWidgetItem(record, ["", queue_id, str(file.id), '','', '', new_name])
-
-                    record.addChild(dummy)
+                        record.addChild(dummy)
             record.setText(1, queue_id)
             record.setText(5, old_names)
             record.setText(8, queue.get_status())
-            if queue.files:
+            if queue.parts:
                 if queue.isSimple:
                     included = "Included"
                     if not queue.included:
                         included = "Excluded"
                     record.setText(7, included)
-
+                # TODO add logic for complex files
             records.append(record)
         self.tree_files.addTopLevelItems(records)
 
@@ -528,55 +532,50 @@ class MainDialog(QDialog, Ui_Form):
             for index, file in enumerate(files):
                 if file.startswith('.'):
                     continue
-                files_per_record = record_bundle(self._oid_marc, index+self._oid_startNum, path=destination)
+                files_per_part = record_bundle(self._oid_marc, index+self._oid_startNum, path=destination)
                 if os.path.splitext(file)[1].lower() == '.tif':
                     newfile = os.path.join(root, file)
                     if smart_sorting:
                         tiffs.append(newfile)
                     else:
-                        files_per_record.add_file2(file_name=newfile, file_type_to_create=FileTypes.MASTER)
-                        files_per_record.add_file2(file_name=newfile, file_type_to_create=FileTypes.ACCESS, new_format=AccessExtensions.JPEG.value)
+                        files_per_part.add_file2(file_name=newfile, file_type_to_create=FileTypes.MASTER)
+                        files_per_part.add_file2(file_name=newfile, file_type_to_create=FileTypes.ACCESS, new_format=AccessExtensions.JPEG.value)
                 elif os.path.splitext(file)[1].lower() == '.jpg':
                     newfile = os.path.join(root, file)
                     if smart_sorting:
                         jpegs.append(newfile)
                     else:
-                        files_per_record.add_file2(file_name=newfile, file_type_to_create=FileTypes.MASTER)
+                        files_per_part.add_file2(file_name=newfile, file_type_to_create=FileTypes.MASTER)
                 if not smart_sorting:
-                    self.copyEngine.builder.add_queue(files_per_record,
+                    self.copyEngine.builder.add_queue([files_per_part],
                                       obj_id_prefix=self._oid_marc,
                                       obj_id_num=index + self._oid_startNum,
                                       proj_id_prefix=self._pid_prefix,
                                       proj_id_num=index + self._pid_startNum)
 
-
         if smart_sorting:
             for index, jpeg in enumerate(jpegs):
-                files_per_record = record_bundle(self._oid_marc, index+self._oid_startNum, path=destination)
+                files_per_part = record_bundle(self._oid_marc, index+self._oid_startNum, path=destination)
                 jpeg_name = os.path.splitext(os.path.basename(jpeg))[0]
                 found_tiff = False
                 for tiff in tiffs:
                     if jpeg_name == os.path.splitext(os.path.basename(tiff))[0]:
 
-
-                        files_per_record.add_file2(file_name=tiff, file_type_to_create=FileTypes.MASTER)
-                        files_per_record.add_file2(file_name=tiff, file_type_to_create=FileTypes.ACCESS, new_format=AccessExtensions.JPEG.value)
+                        files_per_part.add_file2(file_name=tiff, file_type_to_create=FileTypes.MASTER)
+                        files_per_part.add_file2(file_name=tiff, file_type_to_create=FileTypes.ACCESS, new_format=AccessExtensions.JPEG.value)
 
                         found_tiff = True
                         break
                 if not found_tiff:
-                    # files_per_record.add_file(jpeg)
-                    files_per_record.add_file2(file_name=jpeg, file_type_to_create=FileTypes.MASTER)
-                    # files_per_record.add_file2(file_name=jpeg, file_type=FileTypes.ACCESS)
+                    # files_per_part.add_file(jpeg)
+                    files_per_part.add_file2(file_name=jpeg, file_type_to_create=FileTypes.MASTER)
+                    # files_per_part.add_file2(file_name=jpeg, file_type=FileTypes.ACCESS)
 
-                self.copyEngine.builder.add_queue(files_per_record,
-                                  obj_id_prefix=self._oid_marc,
-                                  obj_id_num=index + self._oid_startNum,
-                                  proj_id_prefix=self._pid_prefix,
-                                  proj_id_num=index + self._pid_startNum)
-
-
-
+                self.copyEngine.builder.add_queue([files_per_part],
+                                                  obj_id_prefix=self._oid_marc,
+                                                  obj_id_num=index + self._oid_startNum,
+                                                  proj_id_prefix=self._pid_prefix,
+                                                  proj_id_num=index + self._pid_startNum)
 
         self.buttonRename.setEnabled(True)
         self.update_tree()
@@ -632,8 +631,14 @@ class ReportDialog(QDialog, Ui_dlg_report):
 
 def start_gui(database, folder=None):
     global datafile
+
     datafile = database
+    sys.excepthook = excepthook
     app = QApplication(sys.argv)
+    # error = QErrorMessage()
+    # error.showMessage("error")
+    # error.setText("afdssad")
+    # error.exec_()
     if folder and folder != "":
         if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
             print("Starting GUI with {}".format(folder))
@@ -645,6 +650,54 @@ def start_gui(database, folder=None):
     app.exec_()
 
 
+def excepthook(excType, excValue, tracebackobj):
+
+    Worker.abort()
+    date = datetime.date.today()
+
+    time_ = time.localtime()
+    # error = QErrorMessage()
+    error = QMessageBox()
+    error.setWindowTitle("Critical Error")
+    # error.setIcon()
+    error.setText("Error{}: {}".format(excType.__name__, str(excValue)))
+    error.addButton(QPushButton("Close"), QMessageBox.NoRole)
+    error.addButton(QPushButton("Save"), QMessageBox.YesRole)
+    error.setInformativeText("Do you wish to save the error details for debugging?")
+    error.setDetailedText(str(traceback.format_tb(tracebackobj)))
+    ret = error.exec_()
+
+    if ret == 1:
+
+        save_file = QFileDialog.getSaveFileName(None,
+                                                "Save file",
+                                                "Image_Error_{}{}{}-{}{}.log".format(date.year,
+                                                                                     date.month,
+                                                                                     date.day,
+                                                                                     time_.tm_hour,
+                                                                                     time_.tm_min,
+                                                                                     "Log File (*.log)"))
+        if save_file:
+            try:
+                with open(save_file, 'w') as f:
+                    f.writelines("Time: {}\n".format(time.ctime()))
+                    f.writelines("Platform: {}\n".format(sys.platform))
+                    f.writelines("Version: {}\n".format(sys.version_info))
+
+                    f.writelines("\n")
+                    traceback.print_tb(tracebackobj, None, f)
+                    print("Saving")
+            except IOError:
+                print("Error saving file")
+    QApplication.quit()
+
+    # if error.clickedButton() == save:
+
+    # if save_error == QMessageBox.YesRole:
+
+    # QMessageBox.about(QMessageBox, "error")
+
 if __name__ == '__main__':
+
     sys.stderr.write("Not a runnable script. Run batch_renamer.py instead.\n")
     pass

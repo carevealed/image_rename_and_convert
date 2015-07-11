@@ -63,6 +63,7 @@ class RecordStatus(Enum):
 
 class Singleton(type):
     _instance = None
+
     def __call__(cls, *args, **kwargs):
         if not cls._instance:
             cls._instance = super(Singleton, cls).__call__(*args, **kwargs)
@@ -70,41 +71,68 @@ class Singleton(type):
 
 
 class NameRecord(object):
-    '''
-    Contains the information per each file being converted. The files and project information
-    '''
+    """
+    Contains the information per each part of an object being converted. The files and project information
+
+    """
+
     file_local_id = 0
-    def __init__(self, files, queue, obj_prefix, obj_num, proj_prefix, proj_num, path=None, make_jpegs_from_tiffs=True, simple=True, included=True):
+
+    def __init__(self, parts,
+                 queue,
+                 obj_prefix,
+                 obj_num,
+                 proj_prefix,
+                 proj_num,
+                 path=None,
+                 make_jpegs_from_tiffs=True,
+                 simple=True,
+                 included=True):
+        """
+        :type parts:                    list[record_bundle]
+        :type queue:                    int
+        :type obj_prefix:               str
+        :type obj_num:                  int
+        :type proj_prefix:              str
+        :type proj_num:                 int
+        :type make_jpegs_from_tiffs:    bool
+        :type simple:                   bool
+        :type included:                 bool
+
+
+        """
         self.queue = queue
-        self.files = []
+        self.parts = []
 
         # TODO: IF you want to make complex, here is where do it
-        for file in files.files:
+        for part in parts:
+            files = []
+            for file in part.files:
 
 
-            # file_data.id = self.file_local_id
-            file.id = self.file_local_id
-            if file.file_status == FileStatus.IGNORE:
-                file.output_filename = ""
-            # elif file.file_status == FileStatus.NEEDS_TO_BE_COPIED:
-            else:
-                ending = "_" + str(file.file_suffix) + file.file_extension
-                file.output_filename = obj_prefix + "_" + str(obj_num).zfill(6) + ending
-                file.included = included
+                # file_data.id = self.file_local_id
+                file.id = self.file_local_id
+                if file.file_status == FileStatus.IGNORE:
+                    file.output_filename = ""
+                # elif file.file_status == FileStatus.NEEDS_TO_BE_COPIED:
+                else:
+                    ending = "_" + str(file.file_suffix) + file.file_extension
+                    file.output_filename = obj_prefix + "_" + str(obj_num).zfill(6) + ending
+                    file.included = included
 
-            # file['id'] = self.file_local_id  # OLD WAY
-            # if file['file_status'] == FileStatus.IGNORE:
-            #     file['output_filename'] = ""
-            # elif file['file_status'] == FileStatus.NEEDS_TO_BE_COPIED:
-            # else:
-            #     ending = "_" + str(file['file_suffix']) + file['file_extension']
-            #     file['output_filename'] = obj_prefix + "_" + str(obj_num).zfill(6) + ending
-            #     file['included'] = included
+                # file['id'] = self.file_local_id  # OLD WAY
+                # if file['file_status'] == FileStatus.IGNORE:
+                #     file['output_filename'] = ""
+                # elif file['file_status'] == FileStatus.NEEDS_TO_BE_COPIED:
+                # else:
+                #     ending = "_" + str(file['file_suffix']) + file['file_extension']
+                #     file['output_filename'] = obj_prefix + "_" + str(obj_num).zfill(6) + ending
+                #     file['included'] = included
+                # file['md5'] = self._calculate_md5(file['old'])
+
+                files.append(file)
             NameRecord.file_local_id += 1
-            # file['md5'] = self._calculate_md5(file['old'])
-
-
-            self.files.append(file)
+            self.parts.append(files)
 
         self.project_id = proj_prefix + "_" + str(proj_num)
         self.object_id = obj_prefix + "_" + str(obj_num)
@@ -117,7 +145,10 @@ class NameRecord(object):
 
 
         # self.md5 = self._calculate_md5(original_name)
-        self.isSimple = simple
+        if len(self.parts) > 1:
+            self.isSimple = True
+        else:
+            self.isSimple = False
         self.complex_obj_group = None
         self._status = RecordStatus.pending
 
@@ -157,7 +188,7 @@ class NameRecord(object):
 
     def get_dict(self):
         return {'queue': self.queue,
-                'files': self.files,
+                'files': self.parts,
                 # 'original name': self.old_name,
                 # 'new name': self.new_name,
                 'project id': self.project_id,
@@ -173,6 +204,8 @@ class ProgressStatus(Enum):
     working = 1
 
 class RenameFactory(object):
+    halt = False
+
     def __init__(self, path, project_id=None):
         self._queues = []
         self.names_used = []
@@ -214,6 +247,9 @@ class RenameFactory(object):
                 md5.update(chunk)
         return md5.hexdigest()
 
+    @staticmethod
+    def abort():
+        RenameFactory.halt = True
 
     def update2(self, proj_prefix, proj_start_num, obj_marc, obj_start_num, path):
         queue_count = 0
@@ -226,11 +262,12 @@ class RenameFactory(object):
                 queue.project_id_suffix = proj_prefix
                 queue.project_id = proj_prefix + "_" + str(queue.project_id_number).zfill(6)
                 queue.ia_url = 'https://archive.org/details/' + queue.object_id
-                for file in queue.files:
-                    filename = queue.object_id + "_" + file.file_suffix + file.file_extension
-                    file.included = True
-                    file.filename = os.path.join(path, filename)
-                    file.output_filename = filename
+                for part in queue.parts:
+                    for file in part:
+                        filename = queue.object_id + "_" + file.file_suffix + file.file_extension
+                        file.included = True
+                        file.filename = os.path.join(path, filename)
+                        file.output_filename = filename
                 queue_count += 1
             else:
                 queue.object_id_number = None
@@ -240,11 +277,12 @@ class RenameFactory(object):
                 queue.project_id_suffix = None
                 queue.project_id = None
                 queue.ia_url = None
-                for file in queue.files:
-                    filename = None
-                    file.included = False
-                    file.filename = None
-                    file.output_filename = None
+                for part in queue.parts:
+                    for file in part:
+                        filename = None
+                        file.included = False
+                        file.filename = None
+                        file.output_filename = None
 
 
 
@@ -275,7 +313,7 @@ class RenameFactory(object):
                         files.add_file2(file.source, file_type_to_create=file.file_type, new_format=file.file_extension)
 
             if len(files) > 0:
-                new_queue = NameRecord(files=files,
+                new_queue = NameRecord(parts=files,
                                        queue=queue_count,
                                        obj_prefix=obj_marc,
                                        obj_num=object_count+obj_start_num,
@@ -302,7 +340,7 @@ class RenameFactory(object):
                     elif file_type == FileTypes.ACCESS:
                         files.add_file2(file_name=excluded_file, file_type_to_create=file_type, include=False, new_format=file_format.value)
 
-                new_queue = NameRecord(files=files,
+                new_queue = NameRecord(parts=files,
                                        queue=queue_count,
                                        obj_prefix=obj_marc,
                                        obj_num=object_count+obj_start_num,
@@ -325,14 +363,20 @@ class RenameFactory(object):
 
 
 
-    def add_queue(self, files, obj_id_prefix, obj_id_num, proj_id_prefix, proj_id_num):
+    def add_queue(self, parts, obj_id_prefix, obj_id_num, proj_id_prefix, proj_id_num):
         if obj_id_prefix in self.object_ids:
             pass
         else:
             self.object_ids[obj_id_prefix] = obj_id_num
 
+        new_queue = NameRecord(parts,
+                               len(self._queues),
+                               obj_prefix=obj_id_prefix,
+                               obj_num=obj_id_num,
+                               proj_prefix=proj_id_prefix,
+                               proj_num=proj_id_num)
 
-        new_queue = NameRecord(files, len(self._queues), obj_prefix=obj_id_prefix, obj_num=obj_id_num, proj_prefix=proj_id_prefix, proj_num=proj_id_num)
+
         self._queues.append(new_queue)
 
     def find_file(self, file_id):
@@ -398,56 +442,60 @@ class RenameFactory(object):
             raise TypeError
         record.set_Working()
         temp_files = []
-        for file in record.files:
-            if file.file_status == FileStatus.NEEDS_TO_BE_CREATED or file.file_status == FileStatus.NEEDS_TO_BE_COPIED:
-                new_file = copy.copy(file)
-                # new_path = os.path.split(file['new'])[0]
-                if not os.path.exists(self.new_path):
-                    os.makedirs(self.new_path)
-                record.set_Working()
-                if file.file_status == FileStatus.NEEDS_TO_BE_COPIED:
-                    if MODE == running_mode.DEBUG or MODE == running_mode.BUILD or print_status:
-                        print("Copying {0} to {1}.".format(file.source, file.filename), end="")
-                    destination = os.path.join(self.new_path, file.output_filename)
-                    shutil.copy2(file.source, destination)
-                    if filecmp.cmp(file.source, destination):
+        for part in record.parts:
+
+            for file in part:
+                if RenameFactory.halt:
+                    return False
+                if file.file_status == FileStatus.NEEDS_TO_BE_CREATED or file.file_status == FileStatus.NEEDS_TO_BE_COPIED:
+                    new_file = copy.copy(file)
+                    # new_path = os.path.split(file['new'])[0]
+                    if not os.path.exists(self.new_path):
+                        os.makedirs(self.new_path)
+                    record.set_Working()
+                    if file.file_status == FileStatus.NEEDS_TO_BE_COPIED:
                         if MODE == running_mode.DEBUG or MODE == running_mode.BUILD or print_status:
-                            print("  ... Success!")
+                            print("Copying {0} to {1}.".format(file.source, file.filename), end="")
+                        destination = os.path.join(self.new_path, file.output_filename)
+                        shutil.copy2(file.source, destination)
+                        if filecmp.cmp(file.source, destination):
+                            if MODE == running_mode.DEBUG or MODE == running_mode.BUILD or print_status:
+                                print("  ... Success!")
 
-                        new_file.file_status = FileStatus.NEEDS_A_RECORD
-                        new_file.file_extension = os.path.splitext(destination)[1]
-                        new_file.file_path = os.path.split(destination)[0]
-                        new_file.file_suffix = file.file_suffix
-                        new_file.file_type = file.file_type
-                        new_file.filename = os.path.basename(destination)
-                        new_file.md5 = self._calculate_md5(destination)
+                            new_file.file_status = FileStatus.NEEDS_A_RECORD
+                            new_file.file_extension = os.path.splitext(destination)[1]
+                            new_file.file_path = os.path.split(destination)[0]
+                            new_file.file_suffix = file.file_suffix
+                            new_file.file_type = file.file_type
+                            new_file.filename = os.path.basename(destination)
+                            new_file.md5 = self._calculate_md5(destination)
 
-                        record.set_NeedsUpdating()
-                    else:
-                        sys.stderr.write("Failed!\n")
-                        raise IOError("File {0} does not match {1]".format(file.source, file.filename))
-                elif file.file_status == FileStatus.NEEDS_TO_BE_CREATED:
-                    if MODE == running_mode.DEBUG or MODE == running_mode.BUILD or print_status:
-                        print("Converting {0} to {1}.".format(file.source, file.filename), end="")
-                    new_file = self.convert_format(file)
-
-                    if os.path.exists(os.path.join(new_file.file_path, new_file.filename)):
+                            record.set_NeedsUpdating()
+                        else:
+                            sys.stderr.write("Failed!\n")
+                            raise IOError("File {0} does not match {1]".format(file.source, file.filename))
+                    elif file.file_status == FileStatus.NEEDS_TO_BE_CREATED:
                         if MODE == running_mode.DEBUG or MODE == running_mode.BUILD or print_status:
-                            print("  ... Success!")
-                    else:
-                        sys.stderr.write("Failed to convert!\n")
-                        raise IOError("File {} was not found after being converted from {}".format(new_file.filename, file.source))
-                # FIXME!!!
-                file.md5 = self._calculate_md5(file.source)
-                file.file_suffix = None
-                file.file_type = FileTypes.ORIGINAL
-                temp_files.append(file)
-                temp_files.append(new_file)
-                destination = None
-            else:
-                pass
+                            print("Converting {0} to {1}.".format(file.source, file.filename), end="")
+                        new_file = self.convert_format(file)
 
-        record.files = temp_files
+                        if os.path.exists(os.path.join(new_file.file_path, new_file.filename)):
+                            if MODE == running_mode.DEBUG or MODE == running_mode.BUILD or print_status:
+                                print("  ... Success!")
+                        else:
+                            sys.stderr.write("Failed to convert!\n")
+                            raise IOError("File {} was not found after being converted from {}".format(new_file.filename, file.source))
+                    # FIXME!!!
+                    file.md5 = self._calculate_md5(file.source)
+                    file.file_suffix = None
+                    file.file_type = FileTypes.ORIGINAL
+                    temp_files.append(file)
+                    temp_files.append(new_file)
+                    destination = None
+                else:
+                    pass
+
+        record.parts = temp_files
 
         record.set_NeedsUpdating()
         return record
@@ -633,16 +681,17 @@ class ReportFactory(metaclass=Singleton):
         master = None
         original = None
         access = []
-        for file in record.files:
-            #FIXME: Something is getting mislabled as a access file after being copyied
-            if file.file_type == FileTypes.MASTER:
-                master = file
-            elif file.file_type == FileTypes.ACCESS:
-                access.append(file)
-            elif file.file_type == FileTypes.ORIGINAL:
-                original = file
-            else:
-                raise ValueError
+        for part in record.parts:
+            for file in part:
+                #FIXME: Something is getting mislabled as a access file after being copyied
+                if file.file_type == FileTypes.MASTER:
+                    master = file
+                elif file.file_type == FileTypes.ACCESS:
+                    access.append(file)
+                elif file.file_type == FileTypes.ORIGINAL:
+                    original = file
+                else:
+                    raise ValueError
 
         if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
             print("File: {}".format(master))
@@ -752,7 +801,9 @@ class ReportFactory(metaclass=Singleton):
 
 
 class record_bundle(object):
-
+    """
+    :type files: list[namespace]
+    """
     def __init__(self, object_id_prefix=None, object_id_number=None, path=None):
 
         self.object_id_prefix = object_id_prefix
@@ -777,6 +828,7 @@ class record_bundle(object):
     @property
     def files(self):
         return self._files
+
 
     def add_file(self, file_name, new_name=None):
         raise DeprecationWarning("Use add file2 instead")

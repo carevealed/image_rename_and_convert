@@ -13,6 +13,7 @@ from PyQt4.QtCore import *
 from rename_files.renaming_model import RenameFactory, NameRecord
 
 
+
 class Worker(QThread):
     updateStatus = pyqtSignal(str)
     reporter = pyqtSignal(NameRecord)
@@ -21,14 +22,18 @@ class Worker(QThread):
     request_report = pyqtSignal()
     error_reporter = pyqtSignal(str)
 
+    _halt = False
 
 
     def __init__(self, path):
         QThread.__init__(self)
         self._idle = True
+        # self._halt = False
+
         # self.builder = None
         # self.reporter = None
         self.builder = RenameFactory(path)
+        # halt_worker.connect(self._halt)
 
     # @builder.setter
     # def builder(self, value):
@@ -40,6 +45,12 @@ class Worker(QThread):
     def resume(self):
         self._idle = False
 
+    @staticmethod
+    def abort():
+        Worker._halt = True
+        RenameFactory.abort()
+        print("Halting Worker")
+
     @property
     def idle(self):
         return self._idle
@@ -50,17 +61,23 @@ class Worker(QThread):
     def run(self):
         success = True
         self._idle = False
+        print("starting conversion")
         if self.builder.new_path == "":
             raise ValueError("PAth can't be empty")
         self.reset_progress.emit(len(self.builder.queues))
         for index, i in enumerate(self.builder.queues):
             while self._idle:
                 sleep(1)
-
+            if Worker._halt:
+                success = False
+                break
             if i.included:
                 self.updateStatus.emit("Saving {}".format(i.get_dict()['project id']))
                 try:
                     record = self.builder.execute_rename_from_queue_by_record(i)
+                    if record == False:
+                        success = False
+                        break
                     self.reporter.emit(record)
                 except IOError as ie:
                     self._idle = True
@@ -70,7 +87,8 @@ class Worker(QThread):
 
                 # self.reporter.add_record(record)
             self.update_progress.emit(index+1)
-        self.request_report.emit()
+        if success:
+            self.request_report.emit()
         self._idle = True
         self.updateStatus.emit("Done")
 
