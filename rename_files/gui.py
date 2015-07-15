@@ -2,6 +2,8 @@ import datetime
 import time
 import threading
 from time import sleep
+import types
+from rename_files.jobModel import jobTreeNode, jobTreeModel, ObjectNode, PageNode, PageSideNode, NewFileNodes
 
 __author__ = 'California Audio Visual Preservation Project'
 from PyQt4.QtGui import *
@@ -49,6 +51,8 @@ if MODE == running_mode.TESTING:
     from rename_files.gui_datafiles.renameTest_gui import Ui_Form
 
 
+
+
 class text_styles:
     INVALID = "QWidget { background-color: rgb(255, 200, 200); }"
     VALID = "QWidget { background-color: rgb(200, 255, 200); }"
@@ -75,6 +79,42 @@ class MainDialog(QDialog, Ui_Form):
         self.reporter.initize_database()
 
         # setup
+
+        # set up the model view for the files view
+        self.items = []
+
+        self.jobs_data_root = jobTreeNode("Root")
+        # ------------- Test --------------
+        # newObject = ObjectNode("cusb_000001")
+        # new_page = PageNode(33, newObject)
+        # new_page_side = PageSideNode("a", new_page, "dyyee.tif")
+        # new_file_master = NewFileNodes("dfd_000001_master.tif", "Master", new_page_side)
+        # new_file_access = NewFileNodes("dfd_000001_access.jpg", "Access", new_page_side)
+        # self.jobs_data_root.insertChild(0, newObject)
+        # ------------- Test --------------
+
+        # child = jobTreeNode("dd", parent=self.jobs_data_root)
+        # child1 = jobTreeNode("ddd")
+        # child.insertChild(0, child1)
+        # self.jobs_data_root.insertChild(1, child1)
+        # s.addChild(jobTreeNode("ddd", s))
+        # self.items.append(s)
+        # self.items[-1].addChild()
+        self.data = jobTreeModel(self.jobs_data_root)
+
+        newObject = ObjectNode("cusb_000001")
+        new_page = PageNode(33, newObject)
+        new_page_side = PageSideNode("a", new_page, "dyyee.tif")
+        new_file_master = NewFileNodes("dfd_000001_master.tif", "Master", new_page_side)
+        new_file_access = NewFileNodes("dfd_000001_access.jpg", "Access", new_page_side)
+        self.data.add_object(newObject)
+        self.data.add_object(ObjectNode("dffddfd"))
+        self.data.add_object(ObjectNode("dfdwefd"))
+        self.tree_filesView.setModel(self.data)
+        # child2 = jobTreeNode("round2")
+        # child1.insertChild(0, child2)
+        # child1.insertChild(0, child2)
+
 
         # hide progress bar
         self.progressBar.setVisible(False)
@@ -550,11 +590,26 @@ class MainDialog(QDialog, Ui_Form):
                 if file.startswith('.'):
                     continue
                 files_per_part = record_bundle(self._oid_marc, index+self._oid_startNum, path=destination)
+                newObject = None
                 if os.path.splitext(file)[1].lower() == '.tif':
+                    newObject = ObjectNode("cusb_000001")
+                    new_page = PageNode(33, newObject)
+                    # newObject.addChild(new_page)
+                    new_page_side = PageSideNode("a", new_page, "dyyee.tif")
+                    new_file_master = NewFileNodes("dfd_000001_master.tif", "Master", new_page_side)
+                    new_file_access = NewFileNodes("dfd_000001_access.jpg", "Access", new_page_side)
                     newfile = os.path.join(root, file)
                     if smart_sorting:
                         tiffs.append(newfile)
                     else:
+                        # self.jobs_data_root.insertChild(0, jobTreeNode(newfile))
+
+
+
+                        new_file_master = NewFileNodes("dfd_000001_master.tif", "Master", new_page_side)
+                        new_file_access = NewFileNodes("dfd_000001_access.jpg", "Access", new_page_side)
+
+
                         files_per_part.add_file2(file_name=newfile, file_type_to_create=FileTypes.MASTER)
                         files_per_part.add_file2(file_name=newfile, file_type_to_create=FileTypes.ACCESS, new_format=AccessExtensions.JPEG.value)
                 elif os.path.splitext(file)[1].lower() == '.jpg':
@@ -569,6 +624,8 @@ class MainDialog(QDialog, Ui_Form):
                                       obj_id_num=index + self._oid_startNum,
                                       proj_id_prefix=self._pid_prefix,
                                       proj_id_num=index + self._pid_startNum)
+                if newObject:
+                    self.data.add_object(newObject)
 
         if smart_sorting:
             for index, jpeg in enumerate(jpegs):
@@ -715,6 +772,8 @@ def excepthook(excType, excValue, tracebackobj):
     # if save_error == QMessageBox.YesRole:
 
     # QMessageBox.about(QMessageBox, "error")
+
+
 
 if __name__ == '__main__':
 

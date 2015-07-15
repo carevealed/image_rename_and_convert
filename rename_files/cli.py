@@ -43,9 +43,11 @@ def valid_str(key, keyname, kwargs):
         if key in kwargs.keys():
             if kwargs[key]:
                 if isinstance(kwargs[key], str):
-                    print("{} {}".format("{}:".format(keyname), "[{}]".format(kwargs[key])), end="")
+                    # print("{} {}".format("{}:".format(keyname), "[{}]".format(kwargs[key])), end="")
+                    print("{} {}".format("{}:".format(keyname), "[{}]".format(kwargs[key])))
                 else:
-                    print("{}".format(keyname), end="")
+                    print("{}".format(keyname))
+                    # print("{}".format(keyname), end="")
                 response = input(" :").strip()
                 if response:
                     if not isinstance(response, str):
@@ -65,7 +67,8 @@ def valid_str(key, keyname, kwargs):
             #     print("DIDIN'T FIND IT")
             # valid = True
 
-        print("{}".format(keyname), end="")
+        # print("{}".format(keyname), end="")
+        print("{}".format(keyname))
         response = input(" :").strip()
         if response:
             if not isinstance(response, str):
@@ -88,7 +91,8 @@ def valid_int(key, keyname, kwargs):
         if key in kwargs:
             if kwargs[key]:
                 int(kwargs[key])
-                print("{}: {}".format(keyname, "[{}]".format(kwargs[key])), end="")
+                # print("{}: {}".format(keyname, "[{}]".format(kwargs[key])), end="")
+                print("{}: {}".format(keyname, "[{}]".format(kwargs[key])))
                 response = input(" :").strip()
                 if response:
                     try:
