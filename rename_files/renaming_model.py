@@ -594,6 +594,7 @@ class ReportFactory(metaclass=Singleton):
     @property
     def current_batch(self):
         return self._current_batch
+
     def initize_database(self):
         if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
             print("init the database")

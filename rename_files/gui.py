@@ -3,7 +3,8 @@ import time
 import threading
 from time import sleep
 import types
-from rename_files.jobModel import jobTreeNode, jobTreeModel, ObjectNode, PageNode, PageSideNode, NewFileNodes
+from rename_files.jobModel import jobTreeNode, jobTreeModel, ObjectNode, PageNode, PageSideNode, NewFileNode, FileType, \
+    DataRows
 
 __author__ = 'California Audio Visual Preservation Project'
 from PyQt4.QtGui import *
@@ -21,6 +22,7 @@ from enum import Enum
 import os
 from rename_files.renaming_controller import generate_report
 import traceback
+from queue import Queue
 
 COLOR_MODES = dict({"1": "1-bit pixels, black and white, stored with one pixel per byte",
                     "L": "8-bit pixels, black and white",
@@ -40,7 +42,7 @@ class running_mode(Enum):
     BUIDING = 2
     TESTING = 3
 
-MODE = running_mode.NORMAL
+MODE = running_mode.DEBUG
 datafile = None
 
 
@@ -59,6 +61,8 @@ class text_styles:
 
 class MainDialog(QDialog, Ui_Form):
     halt_worker = pyqtSignal()
+
+
     def __init__(self, parent=None, folder=None):
         super(MainDialog, self).__init__(parent)
         self.setupUi(self)
@@ -75,15 +79,17 @@ class MainDialog(QDialog, Ui_Form):
         self._oid_marc = ""
         self._oid_startNum = 0
         self.reporter = ReportFactory(database=datafile, username="asd")  # TODO: add Username input
+        # self.copyEngine = Worker(self._destination)
         self.copyEngine = Worker(self._destination)
         self.reporter.initize_database()
+        self.tree_files.setVisible(False)
 
         # setup
 
         # set up the model view for the files view
         self.items = []
 
-        self.jobs_data_root = jobTreeNode("Root")
+        self.jobs_data_root = jobTreeNode("Root", self._pid_startNum, self._oid_marc, self._oid_startNum)
         # ------------- Test --------------
         # newObject = ObjectNode("cusb_000001")
         # new_page = PageNode(33, newObject)
@@ -102,14 +108,14 @@ class MainDialog(QDialog, Ui_Form):
         # self.items[-1].addChild()
         self.data = jobTreeModel(self.jobs_data_root)
 
-        newObject = ObjectNode("cusb_000001")
-        new_page = PageNode(33, newObject)
-        new_page_side = PageSideNode("a", new_page, "dyyee.tif")
-        new_file_master = NewFileNodes("dfd_000001_master.tif", "Master", new_page_side)
-        new_file_access = NewFileNodes("dfd_000001_access.jpg", "Access", new_page_side)
-        self.data.add_object(newObject)
-        self.data.add_object(ObjectNode("dffddfd"))
-        self.data.add_object(ObjectNode("dfdwefd"))
+        # newObject = ObjectNode("cusb_000001")
+        # new_page = PageNode(33, newObject)
+        # new_page_side = PageSideNode("a", new_page, "dyyee.tif")
+        # new_file_master = NewFileNode("dfd_000001_master.tif", FileType.MASTER, new_page_side)
+        # new_file_access = NewFileNode("dfd_000001_access.jpg", FileType.ACCESS, new_page_side)
+        # self.data.add_object(newObject)
+        # self.data.add_object(ObjectNode("dffddfd"))
+        # self.data.add_object(ObjectNode("dfdwefd"))
         self.tree_filesView.setModel(self.data)
         # child2 = jobTreeNode("round2")
         # child1.insertChild(0, child2)
@@ -261,31 +267,11 @@ class MainDialog(QDialog, Ui_Form):
         self.copyEngine.resume()
 
     def _test(self):
-        # print(self.gridLayout.getItemPosition(self.pushButton_test.))
-        self.report = QDialog(self)
-        file_id = int(self.tree_files.selectedItems()[0].text(0))
+        print("testing")
+        queues = self.tree_filesView.model().get_active_jobs()
+        for queue in queues:
+            print(queue)
 
-        self._update_data_status()
-        # filename = self.builder.find_file(file_id)['old']
-        # image = Image.open(filename)
-        # thumbnail = ImageQt.ImageQt(filename)
-        # pixmap = QPixmap(filename)
-        # scale_ratio = pixmap.width()/self.preview_image.maximumWidth()
-        # new_y = pixmap.height() / scale_ratio
-        # print("starting frame height: {}".format(self.preview_image.maximumHeight()))
-        # print("Image Height: {}".format(pixmap.height()))
-        # print("Image Width:  {}".format(pixmap.width()))
-        # # self.preview_image.setMinimumHeight(new_y)
-        # # self.preview_image.setMinimumHeight(new_y)
-        # self.preview_image.setFixedHeight(new_y)
-        # print("ratio: {}".format(scale_ratio))
-        # print("setting hight to {}".format(new_y))
-        # self.preview_image.setPixmap(pixmap)
-        # print("Frame height: {}".format(self.preview_image.height()))
-        # print("Frame width: {}".format(self.preview_image.width()))
-
-        # print(self.builder.find_file(file_id)['old'])
-        # self._debug()
 
     def _debug(self):
         data_members = self.__dict__
@@ -323,10 +309,22 @@ class MainDialog(QDialog, Ui_Form):
         self._update_data_status()
 
     def _copy_files(self):
+        jobs = self.tree_filesView.model().get_active_jobs()
+        progress = QProgressDialog("Processing images", "Abort", 0, len(jobs))
+        progress.setWindowModality(Qt.WindowModal)
+        progress.show()
+        for i, job in enumerate(jobs):
+            progress.setValue(i)
+            progress.setLabelText(str(job))
+            # if i == 50:
+            # print(str(job))
+            if progress.wasCanceled():
+                break
+            sleep(0.05)
         # include_report = self.checkBox_IncludeReport.isChecked()
-        self.copyEngine.builder.new_path = self._destination
+        # self.copyEngine.builder.new_path = self._destination
         # self.copyEngine.setup(destination=self._destination, create_report=include_report, reporter=self.reporter)
-        self.copyEngine.start()
+        # self.copyEngine.start()
 
     def _show_report(self):
         job = self.reporter.current_batch
@@ -375,7 +373,9 @@ class MainDialog(QDialog, Ui_Form):
 
     def _update_pid_prefix(self, new_prefix):
         self._pid_prefix = new_prefix
+        jobTreeNode.pid_prefix = self._pid_prefix
         self._update_data_status()
+        self.data.update_object_numbers()
 
     def _update_pid_startNum(self, new_number):
         if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
@@ -383,6 +383,8 @@ class MainDialog(QDialog, Ui_Form):
         try:
             self._pid_startNum = int(new_number)
             self.lineEdit_PID_startNum.setStyleSheet(text_styles.VALID)
+            jobTreeNode.pid_start_num = self._pid_startNum
+            self.data.update_object_numbers()
         except ValueError:
             self.lineEdit_PID_startNum.setStyleSheet(text_styles.INVALID)
             self._pid_startNum = None
@@ -390,13 +392,19 @@ class MainDialog(QDialog, Ui_Form):
 
     def _update_oid_marc(self, new_marc):
         self._oid_marc = new_marc
+        jobTreeNode.oid_marc = self._oid_marc
         self._update_data_status()
+        self.data.update_object_numbers()
 
 
     def _update_oid_startNum(self, new_number):
+        if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
+            print("updating OID: {}".format(new_number))
         try:
             self._oid_startNum = int(new_number)
             self.lineEdit_OID_startNum.setStyleSheet(text_styles.VALID)
+            jobTreeNode.oid_start_num = self._oid_startNum
+            self.data.update_object_numbers()
         except ValueError:
             self.lineEdit_OID_startNum.setStyleSheet(text_styles.INVALID)
             self._oid_startNum = None
@@ -453,16 +461,33 @@ class MainDialog(QDialog, Ui_Form):
             self.pushButton_update.setEnabled(False)
 
     def _include_selection(self):
-        for item in self.tree_files.selectedItems():
-            hasParent =item.parent()
-            if hasParent:
-                id = int(item.parent().text(1))
-            # parent = item.parent()
-            else:
-                id = int(item.text(1))
-            current_status = self.copyEngine.builder.find_queue(id).included
-            self.copyEngine.builder.set_file_include(id, not current_status)
-        self.update_tree()
+        start_index = self.tree_filesView.selectedIndexes()[0]
+        end_index = self.tree_filesView.selectedIndexes()[-1]
+        for index in self.tree_filesView.selectedIndexes():
+            if index.column() != 0:
+                continue
+            item = self.data.getNode(index)
+            # print(item.get_data())
+            included = not item.get_data().included
+            item.set_included(included)
+            # print(current_node)
+
+        if start_index.isValid() and end_index.isValid():
+            self.tree_filesView.dataChanged(start_index, end_index)
+        else:
+            raise Exception("Not valid index")
+
+
+        # for item in self.tree_files.selectedItems():
+        #     hasParent =item.parent()
+        #     if hasParent:
+        #         id = int(item.parent().text(1))
+        #     # parent = item.parent()
+        #     else:
+        #         id = int(item.text(1))
+        #     current_status = self.copyEngine.builder.find_queue(id).included
+        #     self.copyEngine.builder.set_file_include(id, not current_status)
+        # self.update_tree()
 
     def _add_record(self, record):
         # print(record.get_status())
@@ -525,11 +550,6 @@ class MainDialog(QDialog, Ui_Form):
         records = []
         self.tree_files.clear()
         self.copyEngine.builder.update2(self._pid_prefix, self._pid_startNum, self._oid_marc, self._oid_startNum, self._destination)
-        # self.copyEngine.builder.update(obj_marc=self._oid_marc,
-        #             obj_start_num=self._oid_startNum,
-        #             proj_prefix=self._pid_prefix,
-        #             proj_start_num=self._pid_startNum,
-        #             path=self._destination)
         for queue in self.copyEngine.builder.queues:
             simple = "Simple"
             old_names = ""
@@ -583,6 +603,9 @@ class MainDialog(QDialog, Ui_Form):
         newfile = ""
 
         self.tree_files.clear()
+        if self.data.rowCount() > 0:
+            self.data.removeRows(0, self.data.rowCount())
+        jobTreeNode.total_active = 0
         # get all the files that match either tif or jpg
         self.copyEngine.builder.clear_queues()
         for root, subdirs, files in os.walk(source):
@@ -592,12 +615,7 @@ class MainDialog(QDialog, Ui_Form):
                 files_per_part = record_bundle(self._oid_marc, index+self._oid_startNum, path=destination)
                 newObject = None
                 if os.path.splitext(file)[1].lower() == '.tif':
-                    newObject = ObjectNode("cusb_000001")
-                    new_page = PageNode(33, newObject)
-                    # newObject.addChild(new_page)
-                    new_page_side = PageSideNode("a", new_page, "dyyee.tif")
-                    new_file_master = NewFileNodes("dfd_000001_master.tif", "Master", new_page_side)
-                    new_file_access = NewFileNodes("dfd_000001_access.jpg", "Access", new_page_side)
+
                     newfile = os.path.join(root, file)
                     if smart_sorting:
                         tiffs.append(newfile)
@@ -606,8 +624,8 @@ class MainDialog(QDialog, Ui_Form):
 
 
 
-                        new_file_master = NewFileNodes("dfd_000001_master.tif", "Master", new_page_side)
-                        new_file_access = NewFileNodes("dfd_000001_access.jpg", "Access", new_page_side)
+                        # new_file_master = NewFileNodes("dfd_000001_master.tif", "Master", new_page_side)
+                        # new_file_access = NewFileNodes("dfd_000001_access.jpg", "Access", new_page_side)
 
 
                         files_per_part.add_file2(file_name=newfile, file_type_to_create=FileTypes.MASTER)
@@ -626,30 +644,54 @@ class MainDialog(QDialog, Ui_Form):
                                       proj_id_num=index + self._pid_startNum)
                 if newObject:
                     self.data.add_object(newObject)
-
+        #TODO: FIX NOT SMART SORTING
         if smart_sorting:
             for index, jpeg in enumerate(jpegs):
                 files_per_part = record_bundle(self._oid_marc, index+self._oid_startNum, path=destination)
                 jpeg_name = os.path.splitext(os.path.basename(jpeg))[0]
                 found_tiff = False
+                newObject = ObjectNode(self._pid_prefix,
+                                       self._oid_marc)
+
+                new_page = None
+                new_side = None
                 for tiff in tiffs:
                     if jpeg_name == os.path.splitext(os.path.basename(tiff))[0]:
+                        new_page = PageNode(1, newObject)
+                        new_side = PageSideNode(page_side="", original_filename=tiff, parent=new_page)
+                        new_master = NewFileNode(FileType.MASTER, convert=False, parent=new_side)
+                        new_access = NewFileNode(FileType.ACCESS, convert=True, parent=new_side)
+                        print("here", jpeg_name)
 
                         files_per_part.add_file2(file_name=tiff, file_type_to_create=FileTypes.MASTER)
-                        files_per_part.add_file2(file_name=tiff, file_type_to_create=FileTypes.ACCESS, new_format=AccessExtensions.JPEG.value)
+                        files_per_part.add_file2(file_name=tiff,
+                                                 file_type_to_create=FileTypes.ACCESS,
+                                                 new_format=AccessExtensions.JPEG.value)
 
                         found_tiff = True
                         break
+
                 if not found_tiff:
                     # files_per_part.add_file(jpeg)
+                    new_page = PageNode(index + 1, newObject)
+                    new_side = PageSideNode(page_side="", original_filename=jpeg, parent=new_page)
+                    new_master = NewFileNode(FileType.MASTER, convert=False, parent=new_side)
                     files_per_part.add_file2(file_name=jpeg, file_type_to_create=FileTypes.MASTER)
                     # files_per_part.add_file2(file_name=jpeg, file_type=FileTypes.ACCESS)
-
+                self.data.add_object(newObject)
                 self.copyEngine.builder.add_queue([files_per_part],
                                                   obj_id_prefix=self._oid_marc,
                                                   obj_id_num=index + self._oid_startNum,
                                                   proj_id_prefix=self._pid_prefix,
                                                   proj_id_num=index + self._pid_startNum)
+
+
+        # new_page = PageNode(33, newObject)
+        # newObject.addChild(new_page)
+        # new_page_side = PageSideNode("a", new_page, "dyyee.tif")
+
+        # new_file_master = None
+        # new_file_access = None
 
         self.buttonRename.setEnabled(True)
         self.pushButton_group.setEnabled(True)
@@ -772,6 +814,35 @@ def excepthook(excType, excValue, tracebackobj):
     # if save_error == QMessageBox.YesRole:
 
     # QMessageBox.about(QMessageBox, "error")
+
+
+# class Supervisor(threading):
+#     MAX_WORKERS = 1
+#
+#     def __init__(self, model):
+#         super(Supervisor, self).__init__(model)
+#         assert(isinstance(model, jobTreeModel))
+#         self.q = Queue(maxsize=1)
+#         self.model = model
+#         self.workers = []
+#
+#     def add_worker(self, worker):
+#         assert(isinstance(worker, Worker2))
+#         if len(self.workers) <= Supervisor.MAX_WORKERS:
+#             self.workers.append(worker)
+#         pass
+#
+#     def run(self):
+#         print("Running")
+#         # for worker in self.workers:
+#         #     assert(isinstance(worker, Worker2))
+#         #     if worker.is_alive():
+#         #         sleep(1)
+#         #         continue
+#         #     # start_job = self.workers.
+# 		#
+#         #     if worker.is_done():
+#         #         self
 
 
 
