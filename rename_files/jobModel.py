@@ -2,8 +2,8 @@ from collections import namedtuple
 from enum import Enum
 import os
 import types
-from PyQt4.QtCore import QAbstractItemModel, QModelIndex, Qt, pyqtSignal
-
+from PyQt4.QtCore import QAbstractItemModel, QModelIndex, Qt, pyqtSignal, QVariant
+from PyQt4.QtGui import QColor
 __author__ = 'California Audio Visual Preservation Project'
 
 
@@ -15,13 +15,25 @@ class DataRows(Enum):
     PAGE_SIDE = 4
     ORIGINAL_NAME = 5
     NEW_NAME = 6
-    FILE_TYPE = 7
+    DATA_TYPE = 7
     INCLUDED_EXCLUDED = 8
     STATUS = 9
 
 class FileType(Enum):
     ACCESS = "access"
     MASTER = "prsv"
+
+class CollectionComplexity(Enum):
+    EMPTY = "Empty"
+    SIMPLE = "Simple"
+    COMPLEX = "Complex"
+
+class BackgroundColors(Enum):
+    # OBJECT_NODE = QColor(255, 255, 255)
+    OBJECT_NODE = QColor(255, 255, 255)
+    PAGE_NODE = QColor(245, 245, 245)
+    PAGE_SIDE_NODE = QColor(235, 235, 235)
+    FILE_NODE = QColor(225, 225, 225)
 
 class jobTreeModel(QAbstractItemModel):
     def __init__(self, root, parent=None):
@@ -49,8 +61,6 @@ class jobTreeModel(QAbstractItemModel):
             return None
         node = index.internalPointer()
 
-
-
         if role == Qt.DisplayRole:
             # return "df"
 
@@ -59,7 +69,16 @@ class jobTreeModel(QAbstractItemModel):
                     return index.row() + 1
             else:
                 return node.data(index.column())
-        return None
+        if role == Qt.BackgroundColorRole:
+            if index.column() != 0:
+                if isinstance(node, ObjectNode):
+                    return BackgroundColors.OBJECT_NODE.value
+                if isinstance(node, PageNode):
+                    return BackgroundColors.PAGE_NODE.value
+                if isinstance(node, PageSideNode):
+                    return BackgroundColors.PAGE_SIDE_NODE.value
+                if isinstance(node, NewFileNode):
+                    return BackgroundColors.FILE_NODE.value
 
     def parent(self, index):
 
@@ -136,8 +155,8 @@ class jobTreeModel(QAbstractItemModel):
             if section == DataRows.PROJECT_ID.value:
                 return "Project ID"
 
-            if section == DataRows.FILE_TYPE.value:
-                return "File Type"
+            if section == DataRows.DATA_TYPE.value:
+                return "Type"
 
             if section == DataRows.SIMPLE_COMPLEX.value:
                 return "Simple/Complex"
@@ -164,12 +183,14 @@ class jobTreeModel(QAbstractItemModel):
 
 
 
+
 class jobTreeNode(object):
     total_active = 0
     pid_start_num = 0
     pid_prefix = ""
     oid_start_num = 0
     oid_marc = ""
+    SINGLE_PAGE = "Single Page"
     def __init__(self,
                  pid_prefix,
                  pid_start_num,
@@ -226,22 +247,34 @@ class jobTreeNode(object):
 
     def data(self, column):
         if column == DataRows.PROJECT_ID.value:
-            try:
-                return self._data.project_id_prefix + "_" + str(self._data.project_id_number).zfill(6)
-            except TypeError as e:
-                print(column, str(type(self)), str(e))
-                exit(1)
+            if self._data.included:
+                try:
+                    return self._data.project_id_prefix + "_" + str(self._data.project_id_number).zfill(6)
+                except TypeError as e:
+                    print(column, str(type(self)), str(e))
+                    exit(1)
 
         if column == DataRows.SIMPLE_COMPLEX.value:
             if isinstance(self, ObjectNode):
                 if len(self._children) == 0:
-                    return "Empty"
+                    self._data.simple_complex = CollectionComplexity.EMPTY
+                    return self._data.simple_complex.value
                 if len(self._children) > 1 or len(self._children[0]._children) > 1:
-                    return "Complex"
+                    self._data.simple_complex = CollectionComplexity.COMPLEX
+                    return self._data.simple_complex.value
                 else:
-                    return "Simple"
+                    self._data.simple_complex = CollectionComplexity.SIMPLE
+                    return self._data.simple_complex.value
 
         if column == DataRows.ORIGINAL_NAME.value:
+            if isinstance(self, PageNode) or isinstance(self, ObjectNode):
+                if self._data.simple_complex == CollectionComplexity.SIMPLE:
+                    if isinstance(self, ObjectNode):
+                        return self.child(0).child(0).data(DataRows.ORIGINAL_NAME.value)
+                    return self._children[0].data(DataRows.ORIGINAL_NAME.value)
+                if self._data.simple_complex == CollectionComplexity.COMPLEX:
+                    return "..."
+                pass
             return self._data.original_name
 
         if column == DataRows.NEW_NAME.value:
@@ -264,6 +297,9 @@ class jobTreeNode(object):
                     # print(new_name)
                     self._data.new_name = new_name
                     return self._data.new_name
+            if isinstance(self, ObjectNode):
+                if self._data.included:
+                    return "..."
 
         if column == DataRows.INCLUDED_EXCLUDED.value:
             if not self._data.included is None:
@@ -279,7 +315,7 @@ class jobTreeNode(object):
             if isinstance(self, ObjectNode):
                 total_pages = len(self._children)
                 if total_pages == 1:
-                    return "Single page"
+                    return self.SINGLE_PAGE
                 else:
                     return str(total_pages) + " pages"
             return self._data.page_number
@@ -288,15 +324,35 @@ class jobTreeNode(object):
             if isinstance(self, PageNode):
                 total_sides = len(self._children)
                 if total_sides == 1:
-                    return "Single sided"
+                    return "Single Sided"
                 elif total_sides == 2:
-                    return "Double sided"
+                    return "Double Sided"
                 else:
                     raise Exception("There should be only 1 or 2 sides")
+            elif isinstance(self, ObjectNode):
+                if self._data.simple_complex == CollectionComplexity.SIMPLE:
+                    return "Single Sided"
+                if self._data.simple_complex == CollectionComplexity.COMPLEX:
+                    return "..."
             return self._data.page_side
 
-        if column == DataRows.FILE_TYPE.value:
-            return self._data.file_type
+        if column == DataRows.DATA_TYPE.value:
+            if isinstance(self, ObjectNode):
+                return "Object"
+
+            if isinstance(self, PageNode):
+                return "Page"
+
+            if isinstance(self, PageSideNode):
+                return "Page Side"
+
+            if isinstance(self, NewFileNode):
+                if self._data.file_type == FileType.ACCESS:
+                    return "Access File"
+                if self._data.file_type == FileType.MASTER:
+                    return "Master File"
+
+
 
         # if column == dataRows.QUEUE_NUMBER.value:
         #     return 0
@@ -305,7 +361,10 @@ class jobTreeNode(object):
         # return self._data
 
     def child(self, row):
-        return self._children[row]
+        if row < self.childCount():
+            return self._children[row]
+        else:
+            raise IndexError("Row {} is not valid".format(row))
 
     def childCount(self):
         return len(self._children)
@@ -335,7 +394,6 @@ class jobTreeNode(object):
         else:
             for child in self._children:
                 child.set_included(False)
-
     # def children(self):
     #     return self._children
 
@@ -382,6 +440,7 @@ class jobTreeNode(object):
     def update_id_numbers(self):
         for child in self._children:
             child.update_id_numbers()
+
         pass
 
 class ObjectNode(jobTreeNode):
@@ -393,7 +452,7 @@ class ObjectNode(jobTreeNode):
         self.pid_prefix = pid_prefix
         self.oid_marc = oid_marc
         self.included = included
-
+        self.total_pages = 0
 
         if parent is not None:
             parent.addChild(self)
@@ -411,7 +470,7 @@ class ObjectNode(jobTreeNode):
                                                included=self.included,
                                                needs_conversion=None,
                                                status=None)
-            jobTreeNode.total_active += 1
+            # jobTreeNode.total_active += 1
 
         self.update_id_numbers()
 
@@ -499,7 +558,8 @@ class PageNode(jobTreeNode):
 
 class PageSideNode(jobTreeNode):
     def __init__(self, page_side, parent, original_filename, included=True):
-
+        if original_filename == None:
+            raise ValueError
         if page_side is None:
             self._data.page_side = ""
         self._children = []
@@ -590,6 +650,7 @@ class NewFileNode(jobTreeNode):
         self._data.included = value
         if value:
             self.parent().set_included(True)
+        self.update_id_numbers()
 
     def get_jobs(self):
         job_packet = namedtuple('job_packet', ['old_name', 'new_name', 'object_id', 'copy_file', 'convert'])

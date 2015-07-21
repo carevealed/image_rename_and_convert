@@ -14,7 +14,7 @@ from PIL import Image
 from rename_files.renaming_model import RenameFactory, ReportFactory, record_bundle, FileTypes, AccessExtensions, \
     NameRecord, RecordStatus
 from rename_files.gui_datafiles.report_gui import Ui_dlg_report
-from rename_files.worker import Worker
+from rename_files.worker import Worker, Worker2
 from enum import Enum
 import sys
 import argparse
@@ -83,6 +83,7 @@ class MainDialog(QDialog, Ui_Form):
         self.copyEngine = Worker(self._destination)
         self.reporter.initize_database()
         self.tree_files.setVisible(False)
+        self.status = ""
 
         # setup
 
@@ -201,7 +202,7 @@ class MainDialog(QDialog, Ui_Form):
         self.buttonRename.clicked.connect(self._copy_files)
 
         self.tree_files.clicked.connect(self._update_preview_window)
-
+        self.tree_filesView.clicked.connect(self._update_preview_window)
         self.checkBox_preview.clicked.connect(self._toggle_preview)
 
         self.copyEngine.updateStatus.connect(self._update_statusbar)
@@ -215,16 +216,20 @@ class MainDialog(QDialog, Ui_Form):
 
     def _update_preview_window(self):
         if self.showPreview:
+            index = self.tree_filesView.selectedIndexes()[0]
+            item = self.data.getNode(index)
+            filename = item.get_data().original_name
+            if filename is None:
+                return None
             # dummy = self.tree_files.selectedItems()[0].parent()
-            if self.tree_files.selectedItems()[0].parent():
-                item = self.tree_files.selectedItems()[0].parent()
-            else:
-                item = self.tree_files.selectedItems()[0]
-            file_id = int(item.text(2))
-            # file_id
-            filename = self.copyEngine.builder.find_file(file_id).source
+            # if self.tree_files.selectedItems()[0].parent():
+            #     item = self.tree_files.selectedItems()[0].parent()
+            # else:
+            #     item = self.tree_files.selectedItems()[0]
+            # file_id = int(item.text(2))
+            # # file_id
+            # filename = self.copyEngine.builder.find_file(file_id).source
             # self.pixmap.load(filename)
-
             newimage = QPixmap(filename)
             imageMetadata = Image.open(filename)
 
@@ -244,7 +249,9 @@ class MainDialog(QDialog, Ui_Form):
 
             self.le_resolution.setText(resolution)
 
-
+    def update_status_message(self, message):
+        print(message)
+        self.status = message
 
     def _toggle_preview(self):
         if self.showPreview:
@@ -310,17 +317,56 @@ class MainDialog(QDialog, Ui_Form):
 
     def _copy_files(self):
         jobs = self.tree_filesView.model().get_active_jobs()
-        progress = QProgressDialog("Processing images", "Abort", 0, len(jobs))
+        q = Queue()
+        for j in jobs:
+            q.put(j)
+        progress = QProgressDialog("Processing images", "Abort", 0, q.qsize())
+        # progress = QProgressDialog("Processing images", "Abort", 0, len(jobs))
         progress.setWindowModality(Qt.WindowModal)
         progress.show()
-        for i, job in enumerate(jobs):
+        i = 0
+        status = ""
+        worker = Worker2()
+
+
+        # self.connect(worker.updateStatus, status)
+        while q.unfinished_tasks:
+            if not worker.isRunning():
+                job = q.get()
+                worker = Worker2(self._destination, packet=job)
+                worker.updateStatus.connect(self.update_status_message)
+                worker.run()
+            new_message = QLabel()
+            new_message.setText(self.status)
+            new_message.setMargin(20)
+            progress.setLabel(new_message)
+            # progress.setLabelText(self.status.ljust(3))
             progress.setValue(i)
-            progress.setLabelText(str(job))
-            # if i == 50:
-            # print(str(job))
             if progress.wasCanceled():
                 break
-            sleep(0.05)
+
+            # print(i)
+            # print(self.status)
+            if not worker.isRunning():
+                i += 1
+                q.task_done()
+                continue
+
+            sleep(.01)
+
+
+        # for i, job in enumerate(jobs):
+        #     progress.setValue(i)
+        #     progress.setLabelText(str(job))
+        #     current_job = Worker2(job)
+        #     current_job.run()
+        #     while current_job.isRunning():
+        #         print("Sleeping")
+        #         # QThread.sleep(1)
+        #     # if i == 50:
+        #     # print(str(job))
+
+        #     sleep(0.05)
         # include_report = self.checkBox_IncludeReport.isChecked()
         # self.copyEngine.builder.new_path = self._destination
         # self.copyEngine.setup(destination=self._destination, create_report=include_report, reporter=self.reporter)
@@ -398,6 +444,7 @@ class MainDialog(QDialog, Ui_Form):
 
 
     def _update_oid_startNum(self, new_number):
+
         if MODE == running_mode.DEBUG or MODE == running_mode.BUIDING:
             print("updating OID: {}".format(new_number))
         try:
@@ -411,8 +458,14 @@ class MainDialog(QDialog, Ui_Form):
         self._update_data_status()
 
 
-    def _update_data_status(self):
 
+    def _update_data_status(self):
+        if self.data.rowCount() > 0:
+            start_index = self.tree_filesView.selectedIndexes()[0]
+            end_index = self.tree_filesView.selectedIndexes()[-1]
+        else:
+            start_index = QModelIndex()
+            end_index = QModelIndex()
         valid = True
 
         # source
@@ -459,6 +512,8 @@ class MainDialog(QDialog, Ui_Form):
             self.pushButton_load_filles.setEnabled(False)
             self.buttonRename.setEnabled(False)
             self.pushButton_update.setEnabled(False)
+        if start_index.isValid() and end_index.isValid():
+            self.tree_filesView.dataChanged(start_index, end_index)
 
     def _include_selection(self):
         start_index = self.tree_filesView.selectedIndexes()[0]
@@ -471,7 +526,7 @@ class MainDialog(QDialog, Ui_Form):
             included = not item.get_data().included
             item.set_included(included)
             # print(current_node)
-
+        self.data.update_object_numbers()
         if start_index.isValid() and end_index.isValid():
             self.tree_filesView.dataChanged(start_index, end_index)
         else:
@@ -609,25 +664,32 @@ class MainDialog(QDialog, Ui_Form):
         # get all the files that match either tif or jpg
         self.copyEngine.builder.clear_queues()
         for root, subdirs, files in os.walk(source):
-            for index, file in enumerate(files):
+            index = 0
+            for file in files:
                 if file.startswith('.'):
                     continue
+                if not file.lower().endswith('.jpg') and not file.lower().endswith('.tif'):
+                    print("Skipping {}.".format(file))
+                    continue
                 files_per_part = record_bundle(self._oid_marc, index+self._oid_startNum, path=destination)
-                newObject = None
+                newObject = ObjectNode(self._pid_prefix,
+                                       self._oid_marc)
+                # new_page = PageNode(1, newObject)
                 if os.path.splitext(file)[1].lower() == '.tif':
+                    # new_side = PageSideNode(page_side="", original_filename=newfile, parent=new_page)
 
                     newfile = os.path.join(root, file)
                     if smart_sorting:
                         tiffs.append(newfile)
                     else:
                         # self.jobs_data_root.insertChild(0, jobTreeNode(newfile))
-
+						#
+                        # new_master = NewFileNode(FileType.MASTER, convert=False, parent=new_side)
+                        # new_ACCESS = NewFileNode(FileType.ACCESS, convert=True, parent=new_side)
 
 
                         # new_file_master = NewFileNodes("dfd_000001_master.tif", "Master", new_page_side)
                         # new_file_access = NewFileNodes("dfd_000001_access.jpg", "Access", new_page_side)
-
-
                         files_per_part.add_file2(file_name=newfile, file_type_to_create=FileTypes.MASTER)
                         files_per_part.add_file2(file_name=newfile, file_type_to_create=FileTypes.ACCESS, new_format=AccessExtensions.JPEG.value)
                 elif os.path.splitext(file)[1].lower() == '.jpg':
@@ -635,19 +697,26 @@ class MainDialog(QDialog, Ui_Form):
                     if smart_sorting:
                         jpegs.append(newfile)
                     else:
+                        # new_master = NewFileNode(FileType.MASTER, convert=False, parent=new_side)
                         files_per_part.add_file2(file_name=newfile, file_type_to_create=FileTypes.MASTER)
+                else:
+                    continue
                 if not smart_sorting:
+
+                    # self.data.add_object(newObject)
                     self.copyEngine.builder.add_queue([files_per_part],
                                       obj_id_prefix=self._oid_marc,
                                       obj_id_num=index + self._oid_startNum,
                                       proj_id_prefix=self._pid_prefix,
                                       proj_id_num=index + self._pid_startNum)
-                if newObject:
-                    self.data.add_object(newObject)
+                # if newObject:
+                #     self.data.add_object(newObject)
+                index += 1
         #TODO: FIX NOT SMART SORTING
         if smart_sorting:
+            index = 0
             for index, jpeg in enumerate(jpegs):
-                files_per_part = record_bundle(self._oid_marc, index+self._oid_startNum, path=destination)
+                # files_per_part = record_bundle(self._oid_marc, index+self._oid_startNum, path=destination)
                 jpeg_name = os.path.splitext(os.path.basename(jpeg))[0]
                 found_tiff = False
                 newObject = ObjectNode(self._pid_prefix,
@@ -655,13 +724,15 @@ class MainDialog(QDialog, Ui_Form):
 
                 new_page = None
                 new_side = None
+                # new_master = None
+                # new_access = None
                 for tiff in tiffs:
                     if jpeg_name == os.path.splitext(os.path.basename(tiff))[0]:
                         new_page = PageNode(1, newObject)
                         new_side = PageSideNode(page_side="", original_filename=tiff, parent=new_page)
                         new_master = NewFileNode(FileType.MASTER, convert=False, parent=new_side)
                         new_access = NewFileNode(FileType.ACCESS, convert=True, parent=new_side)
-                        print("here", jpeg_name)
+
 
                         files_per_part.add_file2(file_name=tiff, file_type_to_create=FileTypes.MASTER)
                         files_per_part.add_file2(file_name=tiff,
@@ -669,11 +740,12 @@ class MainDialog(QDialog, Ui_Form):
                                                  new_format=AccessExtensions.JPEG.value)
 
                         found_tiff = True
+                        # self.data.add_object(newObject)
                         break
 
                 if not found_tiff:
                     # files_per_part.add_file(jpeg)
-                    new_page = PageNode(index + 1, newObject)
+                    new_page = PageNode(1, newObject)
                     new_side = PageSideNode(page_side="", original_filename=jpeg, parent=new_page)
                     new_master = NewFileNode(FileType.MASTER, convert=False, parent=new_side)
                     files_per_part.add_file2(file_name=jpeg, file_type_to_create=FileTypes.MASTER)
@@ -696,7 +768,8 @@ class MainDialog(QDialog, Ui_Form):
         self.buttonRename.setEnabled(True)
         self.pushButton_group.setEnabled(True)
         self.pushButton_include.setEnabled(True)
-        self.update_tree()
+        self.data.update_object_numbers()
+        # self.update_tree()
 
     def update_click(self):
         if os.path.isdir(self.lineEdit_source.text()):

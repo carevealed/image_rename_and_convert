@@ -4,6 +4,7 @@ from time import sleep
 import shutil
 from PIL import Image, ImageFilter
 
+
 __author__ = 'California Audio Visual Preservation Project'
 
 # from PySide.QtGui import *
@@ -105,8 +106,66 @@ class Worker(QThread):
 #   convert Bool
 
 
+class Worker2(QThread):
+    updateStatus = pyqtSignal(str)
+
+    def __init__(self, path=None, packet=None):
+        QThread.__init__(self)
+        print("Worker initiated")
+        self._packet = packet
+        self._path = path
+
+
+    def run(self):
+        # QThread.sleep(100)
+        # sleep(2)
+        if not self._packet:
+            raise Exception("Need a job packet")
+        # print(str(self._packet))
+        # print(str(type(self._packet)))
+        # self.updateStatus.emit(str(self._packet))
+        # print("working")
+        # print(str(self._packet))
+        if self._packet.convert:
+            self.updateStatus.emit("Converting new files:\n\n"
+                                   "From:\t{}\n"
+                                   "As:\t{}\n"
+                                   "To:\t{}"
+                                   .format(self._packet.old_name, self._packet.new_name, self._path))
+            self.convert_format(self._packet.old_name, os.path.join(self._path, self._packet.new_name))
+        if self._packet.copy_file:
+            self.updateStatus.emit("Copying files:\n\n"
+                                   "From:\t{}\n"
+                                   "As:\t{}\n"
+                                   "To:\t{}".format(self._packet.old_name, self._packet.new_name, self._path))
+            self.copy_files(self._packet.old_name, os.path.join(self._path, self._packet.new_name))
+
+    def convert_format(self, source, destination):
+        img = Image.open(source)
+        if img.mode == '1':
+            # blur the image to make it compress better
+            img = img.convert('RGB')
+            img = img.filter(ImageFilter.GaussianBlur(3))
+        img = img.convert('RGB')
+
+
+            # raise AmbiguousMode(file['source'])
+        img.save(destination,
+                 'jpeg',
+                 icc_profile=img.info.get("icc_profile"),
+                 quality=90,
+                 subsampling=1,
+                 progressive=True)
+        img.close()
+
+    def copy_files(self, source, destination):
+        if not os.path.exists(os.path.dirname(destination)):
+            os.makedirs(os.path.dirname(destination))
+        # record.set_Working()
+        shutil.copy2(source, destination)
+
 # class Worker2(object):
-#     updateStatus = pyqtSignal(str)
+    updateStatus = pyqtSignal(str)
 #     reporter = pyqtSignal(NameRecord)
 #     reset_progress = pyqtSignal(int)
 #     update_progress = pyqtSignal(int)
@@ -190,41 +249,41 @@ class Worker(QThread):
 #         pass
 #
 #
-#     def convert_format(self, source, destination):
-#             # new_file = copy.copy(file)
-#
-#             # if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
-#             #     print("converting {}".format(file.source))
-#             img = Image.open(source)
-#             if img.mode == '1':
-#                 # blur the image to make it compress better
-#                 img = img.convert('RGB')
-#                 img = img.filter(ImageFilter.GaussianBlur(3))
-#             img = img.convert('RGB')
-#
-#
-#                 # raise AmbiguousMode(file['source'])
-#             img.save(destination,
-#                      'jpeg',
-#                      icc_profile=img.info.get("icc_profile"),
-#                      quality=90,
-#                      subsampling=1,
-#                      progressive=True)
-#             img.close()
-#             # except IOError:
-#             #     img = Image.open(file['source'])
-#             #     img.save(os.path.join(self.new_path, file['output_filename']), 'jpeg', icc_profile=img.info.get("icc_profile"), quality=90, subsampling=1, optimize=True)
-#             #     img.close()
-#             # if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
-#             #     print("Calculating new checksum")
-# 			#
-#             # new_file.filename = file.output_filename
-#             # new_file.md5 = self._calculate_md5(os.path.join(self.new_path, file.output_filename))
-#             # new_file.file_path = self.new_path
-#             # new_file.file_suffix = "access"
-#             # new_file.file_extension = os.path.splitext(file.output_filename)[1]
-#             # new_file.file_status = FileStatus.DERIVED
-#             # new_file.file_type = FileTypes.ACCESS
-# 			#
-# 			#
-#             # return new_file
+    # def convert_format(self, source, destination):
+    #         # new_file = copy.copy(file)
+	#
+    #         # if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
+    #         #     print("converting {}".format(file.source))
+    #         img = Image.open(source)
+    #         if img.mode == '1':
+    #             # blur the image to make it compress better
+    #             img = img.convert('RGB')
+    #             img = img.filter(ImageFilter.GaussianBlur(3))
+    #         img = img.convert('RGB')
+	#
+	#
+    #             # raise AmbiguousMode(file['source'])
+    #         img.save(destination,
+    #                  'jpeg',
+    #                  icc_profile=img.info.get("icc_profile"),
+    #                  quality=90,
+    #                  subsampling=1,
+    #                  progressive=True)
+    #         img.close()
+            # except IOError:
+            #     img = Image.open(file['source'])
+            #     img.save(os.path.join(self.new_path, file['output_filename']), 'jpeg', icc_profile=img.info.get("icc_profile"), quality=90, subsampling=1, optimize=True)
+            #     img.close()
+            # if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
+            #     print("Calculating new checksum")
+			#
+            # new_file.filename = file.output_filename
+            # new_file.md5 = self._calculate_md5(os.path.join(self.new_path, file.output_filename))
+            # new_file.file_path = self.new_path
+            # new_file.file_suffix = "access"
+            # new_file.file_extension = os.path.splitext(file.output_filename)[1]
+            # new_file.file_status = FileStatus.DERIVED
+            # new_file.file_type = FileTypes.ACCESS
+			#
+			#
+            # return new_file
