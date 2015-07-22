@@ -772,27 +772,33 @@ class ReportFactory(metaclass=Singleton):
 
             # print(part)
             #FIXME: fix database issues
+
+        ia_url = "https://archive.org/details/" + original.object_id
         self._database.execute('INSERT INTO records('
                                'job_id, project_id_prefix, project_id_number, object_id_prefix, object_id_number, ia_url) '
                                'VALUES(?,?,?,?,?,?)',
-                               (self._current_batch, "record.project_id_prefix", "record.project_id_number", "record.object_id_prefix", "record.object_id_number", "record.ia_url"))
+                               (self._current_batch,
+                                original.project_id_prefix,
+                                original.project_id_number,
+                                original.object_id_marc,
+                                original.object_id_number,
+                                ia_url))
         record_id = self._database.execute('SELECT LAST_INSERT_ROWID()').fetchone()['LAST_INSERT_ROWID()']
         # add original into database
         name = os.path.basename(original.old_name)
         path = os.path.dirname(original.old_name)
         query = 'INSERT INTO files '
-        query += '(type, file_name, file_location, md5, file_suffix, file_extension) '
-        query += 'VALUES("{}", "{}", "{}", "{}", "{}", "{}")'.format(original.type,
-                                                                     name,
-                                                                     path,
-                                                                     original.md5,
-                                                                     original.file_suffix,
-                                                                     original.file_extension)
+        query += '(type, file_name, file_location, md5, file_extension) '
+        query += 'VALUES("{}", "{}", "{}", "{}", "{}")'.format(original.type,
+                                                               name,
+                                                               path,
+                                                               original.md5,
+                                                               original.file_extension)
 
         self._database.execute(query)
         source_id = self._database.execute('SELECT LAST_INSERT_ROWID()').fetchone()['LAST_INSERT_ROWID()']
-        name = os.path.basename(master.old_name)
-        path = os.path.dirname(master.old_name)
+        name = os.path.basename(master.new_name)
+        path = os.path.dirname(master.new_name)
         # Add master into database
         query = 'INSERT INTO files '
         query += '(type, file_name, file_location, md5, file_suffix, file_extension, source) '
@@ -800,8 +806,8 @@ class ReportFactory(metaclass=Singleton):
                                                                            name,
                                                                            path,
                                                                            master.md5,
-                                                                           master.file_suffix,
-                                                                           original.file_extension,
+                                                                           master.file_suffix.value,
+                                                                           master.file_extension,
                                                                            source_id)
         self._database.execute(query)
         self._database.execute('INSERT INTO file_pairs('
@@ -812,15 +818,15 @@ class ReportFactory(metaclass=Singleton):
         #     if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
         #         print("File: {}".format(master))
         if access:
-            name = os.path.basename(access.old_name)
-            path = os.path.dirname(access.old_name)
+            name = os.path.basename(access.new_name)
+            path = os.path.dirname(access.new_name)
             query = 'INSERT INTO files '
             query += '(type, file_name, file_location, md5, file_suffix, file_extension, source) '
             query += 'VALUES("{}", "{}", "{}", "{}", "{}", "{}", "{}")'.format(access.type,
                                                                                name,
                                                                                path,
                                                                                access.md5,
-                                                                               access.file_suffix,
+                                                                               access.file_suffix.value,
                                                                                access.file_extension,
                                                                                source_id)
             self._database.execute(query)

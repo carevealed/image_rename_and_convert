@@ -622,6 +622,10 @@ class PageSideNode(jobTreeNode):
 class NewFileNode(jobTreeNode):
     job_packet = namedtuple('job_packet', ['old_name',
                                            'new_name',
+                                           'project_id_prefix',
+                                           'project_id_number',
+                                           'object_id_marc',
+                                           'object_id_number',
                                            'object_id',
                                            'copy_file',
                                            'convert',
@@ -675,6 +679,10 @@ class NewFileNode(jobTreeNode):
                 generation = None
             packet = self.job_packet(old_name=self.data(DataRows.ORIGINAL_NAME.value),
                                      new_name=self.data(DataRows.NEW_NAME.value),
+                                     project_id_prefix=self._data.project_id_prefix,
+                                     project_id_number=self._data.project_id_number,
+                                     object_id_marc=self._data.object_id_marc,
+                                     object_id_number=self._data.object_id_number,
                                      object_id=self._data.project_id_prefix + "_" + str(self._data.project_id_number).zfill(6),
                                      copy_file=self._data.needs_copying,
                                      convert=self._data.needs_conversion,

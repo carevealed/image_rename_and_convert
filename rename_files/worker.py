@@ -114,6 +114,10 @@ class Worker(QThread):
 class Worker2(QThread):
     report_packet = namedtuple('report_packet', ['old_name',
                                                  'new_name',
+                                                 'project_id_prefix',
+                                                 'project_id_number',
+                                                 'object_id_marc',
+                                                 'object_id_number',
                                                  'object_id',
                                                  'type',
                                                  'md5',
@@ -160,7 +164,11 @@ class Worker2(QThread):
 
         # If needed convert file to new format
         new_name = os.path.join(self._path, self._packet.new_name)
+        extension = os.path.splitext(self._packet.new_name)[1]
+
         if self._packet.convert:
+            if len(extension) > 5:
+                raise ValueError("Extension is too long to be an extension. Got " + str(extension))
             self.updateStatus.emit(self.status_packet(title="Converting new files",
                                                       s_file=self._packet.old_name,
                                                       d_file=self._packet.new_name,
@@ -174,9 +182,13 @@ class Worker2(QThread):
                                                       path=None))
             checksum = self.get_md5(new_name)
             date = ctime()
-            extension = os.path.splitext(new_name)[1]
+
             new_packet = self.report_packet(old_name=self._packet.old_name,
                                             new_name=self._packet.new_name,
+                                            project_id_prefix=self._packet.project_id_prefix,
+                                            project_id_number=self._packet.project_id_number,
+                                            object_id_marc=self._packet.object_id_marc,
+                                            object_id_number=self._packet.object_id_number,
                                             object_id=self._packet.object_id,
                                             type=self._packet.file_generation,
                                             md5=checksum,
@@ -217,6 +229,10 @@ class Worker2(QThread):
             extension = os.path.splitext(new_name)[1]
             new_packet = self.report_packet(old_name=self._packet.old_name,
                                             new_name=self._packet.new_name,
+                                            project_id_prefix=self._packet.project_id_prefix,
+                                            project_id_number=self._packet.project_id_number,
+                                            object_id_marc=self._packet.object_id_marc,
+                                            object_id_number=self._packet.object_id_number,
                                             object_id=self._packet.object_id,
                                             type=self._packet.file_generation,
                                             md5=checksum,
@@ -230,6 +246,7 @@ class Worker2(QThread):
 
 
     def convert_format(self, source, destination):
+        print("Converting")
         img = Image.open(source)
         if img.mode == '1':
             # blur the image to make it compress better

@@ -258,20 +258,31 @@ class MainDialog(QDialog, Ui_Form):
 
     def update_status_message(self, packet):
         print(packet)
-        self.status = '<h3 align="left">\t{}</h3><br>' \
+        self.status = '<h3 align="left">\tProcessing Images</h3><br>' \
                       '<table cellpadding="5">' \
                       '<tr>' \
-                      '<th align="left">From:</th>' \
+                      '<th align="left">Process:</th>' \
                       '<td>{}</td>' \
-                      '</tr>' \
-                      '<tr>' \
-                      '<th align="left">As:</th>' \
-                      '<td>{}</td>' \
-                      '</tr>' \
-                      '<tr>' \
-                      '<th align="left">To:</th>' \
-                      '<td>{}</td>' \
-                      '</tr>'.format(packet.title, packet.s_file, packet.d_file, packet.path)
+                      '</tr>'.format(packet.title)
+
+        if not packet.d_file is None:
+            self.status += '<tr>' \
+                           '<th align="left">From:</th>' \
+                           '<td>{}</td>' \
+                           '</tr>' \
+                           '<tr>' \
+                           '<th align="left">As:</th>' \
+                           '<td>{}</td>' \
+                           '</tr>' \
+                           '<tr>' \
+                           '<th align="left">To:</th>' \
+                           '<td>{}</td>' \
+                           '</tr>'.format(packet.s_file, packet.d_file, packet.path)
+        else:
+            self.status += '<tr>' \
+                           '<th align="left">File:</th>' \
+                           '<td>{}</td>' \
+                           '</tr>'.format(packet.s_file)
         # self.status = packet
 
     def _toggle_preview(self):
@@ -296,9 +307,10 @@ class MainDialog(QDialog, Ui_Form):
 
     def _test(self):
         print("testing")
-        queues = self.tree_filesView.model().get_active_jobs()
-        for queue in queues:
-            print(queue)
+        ReportDialog(2)
+        # queues = self.tree_filesView.model().get_active_jobs()
+        # for queue in queues:
+        #     print(queue)
 
 
     def _debug(self):
@@ -337,6 +349,7 @@ class MainDialog(QDialog, Ui_Form):
         self._update_data_status()
 
     def _copy_files(self):
+        include_report = self.checkBox_IncludeReport.isChecked()
         jobs = self.tree_filesView.model().get_active_jobs()
         q = Queue()
         for j in jobs:
@@ -377,9 +390,10 @@ class MainDialog(QDialog, Ui_Form):
 
             sleep(.01)
         report_queues = self._sort_reports()
-        progress = QProgressDialog("Writing report", "Abort", 0, len(report_queues))
+        progress = QProgressDialog("Writing report. Please wait", "Abort", 0, len(report_queues))
         progress.setWindowModality(Qt.WindowModal)
         progress.show()
+        sleep(.5)
         i = 0
         assert(isinstance(report_queues, tuple))
         for i, record in enumerate(report_queues):
@@ -398,6 +412,9 @@ class MainDialog(QDialog, Ui_Form):
             # print(str(job))
             # report_queues.task_done()
 
+        if include_report:
+            print("Opening report")
+            self._run_reports()
 
 
 
@@ -413,7 +430,7 @@ class MainDialog(QDialog, Ui_Form):
         #     # print(str(job))
 
         #     sleep(0.05)
-        # include_report = self.checkBox_IncludeReport.isChecked()
+        #
         # self.copyEngine.builder.new_path = self._destination
         # self.copyEngine.setup(destination=self._destination, create_report=include_report, reporter=self.reporter)
         # self.copyEngine.start()
@@ -449,14 +466,18 @@ class MainDialog(QDialog, Ui_Form):
                 if packet.object_id == id:
                     object_packets.append(packet)
             original = Worker2.report_packet(old_name=object_packets[0].old_name,
-                                                  new_name=None,
-                                                  object_id=object_packets[0].object_id,
-                                                  type="Original",
-                                                  md5=Worker2.get_md5(object_packets[0].old_name),
-                                                  date=None,
-                                                  file_suffix=None,
-                                                  file_extension=os.path.splitext(object_packets[0].old_name)[0],
-                                                  notes=None)
+                                             new_name=None,
+                                             project_id_prefix=object_packets[0].project_id_prefix,
+                                             project_id_number=object_packets[0].project_id_number,
+                                             object_id_marc=object_packets[0].object_id_marc,
+                                             object_id_number=object_packets[0].object_id_number,
+                                             object_id=object_packets[0].object_id,
+                                             type="Original",
+                                             md5=Worker2.get_md5(object_packets[0].old_name),
+                                             date=None,
+                                             file_suffix=None,
+                                             file_extension=os.path.splitext(object_packets[0].old_name)[1],
+                                             notes=None)
             object_packets.insert(0, original)
 
             reports.append(tuple(object_packets))
@@ -470,8 +491,10 @@ class MainDialog(QDialog, Ui_Form):
         report.exec_()
 
     def _save_report(self):
+        assert(isinstance(self._destination, str))
         try:
-            generate_report(self.reporter, os.path.join(self.copyEngine.builder.new_path, "report.csv"))
+            generate_report(self.reporter, os.path.join(self._destination, "report.csv"))
+            # generate_report(self.reporter, os.path.join(self.copyEngine.builder.new_path, "report.csv"))
         except FileExistsError:
             msg_box = QMessageBox()
             msg_box.setText("The saving location already has a report, do you wish to overwrite it?")
@@ -480,8 +503,8 @@ class MainDialog(QDialog, Ui_Form):
             if res == QMessageBox.Cancel:
                 pass
             elif res == QMessageBox.Yes:
-                os.remove(os.path.join(self.copyEngine.builder.new_path, "report.csv"))
-                generate_report(self.reporter, os.path.join(self.copyEngine.builder.new_path, "report.csv"))
+                os.remove(os.path.join(self._destination, "report.csv"))
+                generate_report(self.reporter, os.path.join(self._destination, "report.csv"))
 
             elif res == QMessageBox.No:
                 # Ask user for another name
@@ -781,14 +804,6 @@ class MainDialog(QDialog, Ui_Form):
                     if smart_sorting:
                         tiffs.append(newfile)
                     else:
-                        # self.jobs_data_root.insertChild(0, jobTreeNode(newfile))
-						#
-                        # new_master = NewFileNode(FileType.MASTER, convert=False, parent=new_side)
-                        # new_ACCESS = NewFileNode(FileType.ACCESS, convert=True, parent=new_side)
-
-
-                        # new_file_master = NewFileNodes("dfd_000001_master.tif", "Master", new_page_side)
-                        # new_file_access = NewFileNodes("dfd_000001_access.jpg", "Access", new_page_side)
                         newObject = ObjectNode(self._pid_prefix, self._oid_marc)
                         new_page = PageNode(1, newObject)
                         new_side = PageSideNode(page_side="", original_filename=newfile, parent=new_page)
@@ -823,7 +838,6 @@ class MainDialog(QDialog, Ui_Form):
                 # if newObject:
                 #     self.data.add_object(newObject)
                 index += 1
-        #TODO: FIX NOT SMART SORTING
         if smart_sorting:
             index = 0
             for index, jpeg in enumerate(jpegs):
