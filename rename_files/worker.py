@@ -1,6 +1,7 @@
+import hashlib
 import os
 import threading
-from time import sleep
+from time import sleep, ctime
 import shutil
 from PIL import Image, ImageFilter
 
@@ -16,8 +17,12 @@ from PyQt4.QtCore import *
 from rename_files.renaming_model import RenameFactory, NameRecord
 from collections import namedtuple
 
+class WorkerException(Exception):
+    def __init__(self, message, errors):
+        super(WorkerException, self).__init__(message)
+        self.errors = errors
 
-
+@DeprecationWarning
 class Worker(QThread):
     updateStatus = pyqtSignal(str)
     reporter = pyqtSignal(NameRecord)
@@ -107,7 +112,18 @@ class Worker(QThread):
 
 
 class Worker2(QThread):
-    updateStatus = pyqtSignal(str)
+    report_packet = namedtuple('report_packet', ['old_name',
+                                                 'new_name',
+                                                 'object_id',
+                                                 'type',
+                                                 'md5',
+                                                 'date',
+                                                 'file_suffix',
+                                                 'file_extension',
+                                                 'notes'])
+    status_packet = namedtuple('status_packet', ['title', 's_file', 'd_file', 'path'])
+    updateStatus = pyqtSignal(status_packet)
+    job_completed = pyqtSignal(report_packet)
 
     def __init__(self, path=None, packet=None):
         QThread.__init__(self)
@@ -120,25 +136,98 @@ class Worker2(QThread):
         # QThread.sleep(100)
         # sleep(2)
         if not self._packet:
-            raise Exception("Need a job packet")
-        # print(str(self._packet))
-        # print(str(type(self._packet)))
-        # self.updateStatus.emit(str(self._packet))
-        # print("working")
-        # print(str(self._packet))
+            raise WorkerException("Need a job packet")
+
+
+
+        # Add a copy of the original to the report
+        self.updateStatus.emit(self.status_packet(title="Calculating MD5",
+                                                  s_file=os.path.basename(self._packet.old_name),
+                                                  d_file=None,
+                                                  path=None))
+        # checksum = self.get_md5(self._packet.old_name)
+        # extension = os.path.splitext(self._packet.old_name)[1]
+        # new_packet = self.report_packet(old_name=self._packet.old_name,
+        #                                     new_name=self._packet.new_name,
+        #                                     object_id=self._packet.object_id,
+        #                                     type="Original",
+        #                                     md5=checksum,
+        #                                     date=None, # TODO change to date Created
+        #                                     file_suffix=self._packet.file_suffix,
+        #                                     file_extension=extension,
+        #                                     notes=None)
+        # self.job_completed.emit(new_packet)
+
+        # If needed convert file to new format
+        new_name = os.path.join(self._path, self._packet.new_name)
         if self._packet.convert:
-            self.updateStatus.emit("Converting new files:\n\n"
-                                   "From:\t{}\n"
-                                   "As:\t{}\n"
-                                   "To:\t{}"
-                                   .format(self._packet.old_name, self._packet.new_name, self._path))
-            self.convert_format(self._packet.old_name, os.path.join(self._path, self._packet.new_name))
+            self.updateStatus.emit(self.status_packet(title="Converting new files",
+                                                      s_file=self._packet.old_name,
+                                                      d_file=self._packet.new_name,
+                                                      path=self._packet))
+            if not self.convert_format(self._packet.old_name, new_name):
+                raise WorkerException(self._packet.old_name, " failed to convert.")
+
+            self.updateStatus.emit(self.status_packet(title="Calculating MD5",
+                                                      s_file=self._packet.new_name,
+                                                      d_file=None,
+                                                      path=None))
+            checksum = self.get_md5(new_name)
+            date = ctime()
+            extension = os.path.splitext(new_name)[1]
+            new_packet = self.report_packet(old_name=self._packet.old_name,
+                                            new_name=self._packet.new_name,
+                                            object_id=self._packet.object_id,
+                                            type=self._packet.file_generation,
+                                            md5=checksum,
+                                            date=date, # TODO change to date Created
+                                            file_suffix=self._packet.file_suffix,
+                                            file_extension=extension,
+                                            notes=None)
+            self.job_completed.emit(new_packet)
+
+        # If needed copy the file to the new destination
         if self._packet.copy_file:
-            self.updateStatus.emit("Copying files:\n\n"
-                                   "From:\t{}\n"
-                                   "As:\t{}\n"
-                                   "To:\t{}".format(self._packet.old_name, self._packet.new_name, self._path))
-            self.copy_files(self._packet.old_name, os.path.join(self._path, self._packet.new_name))
+            self.updateStatus.emit(self.status_packet(title="Copying Files",
+                                                      s_file=self._packet.old_name,
+                                                      d_file=self._packet.new_name,
+                                                      path=self._path))
+            # self.updateStatus.emit('<h3 align="center">Copying files</h3><br>'
+            #                        '<table cellpadding="5">'
+            #                        '<tr>'
+            #                        '<th align="left">From:</th>'
+            #                        '<td>{}</td>'
+            #                        '</tr>'
+            #                        '<tr>'
+            #                        '<th align="left">As:</th>'
+            #                        '<td>{}</td>'
+            #                        '</tr>'
+            #                        '<tr>'
+            #                        '<th align="left">To:</th>'
+            #                        '<td>{}</td>'
+            #                        '</tr>'
+            #                        # '<p align="left">From:\t{}</p>\n'
+            #                        # '<p align="left">As:\t{}</p>\n'
+            #                        # '<p align="left">To:\t{}</p>'
+            #                        .format(self._packet.old_name, self._packet.new_name, self._path))
+            if not self.copy_files(self._packet.old_name, os.path.join(self._path, self._packet.new_name)):
+                raise WorkerException(self._packet.old_name, " failed to copy.")
+            checksum = self.get_md5(new_name)
+            date = ctime()
+            extension = os.path.splitext(new_name)[1]
+            new_packet = self.report_packet(old_name=self._packet.old_name,
+                                            new_name=self._packet.new_name,
+                                            object_id=self._packet.object_id,
+                                            type=self._packet.file_generation,
+                                            md5=checksum,
+                                            date=date, # TODO change to date Created
+                                            file_suffix=self._packet.file_suffix,
+                                            file_extension=extension,
+                                            notes=None)
+            self.job_completed.emit(new_packet)
+
+
+
 
     def convert_format(self, source, destination):
         img = Image.open(source)
@@ -149,6 +238,7 @@ class Worker2(QThread):
         img = img.convert('RGB')
 
 
+
             # raise AmbiguousMode(file['source'])
         img.save(destination,
                  'jpeg',
@@ -157,15 +247,30 @@ class Worker2(QThread):
                  subsampling=1,
                  progressive=True)
         img.close()
+        return True
 
     def copy_files(self, source, destination):
         if not os.path.exists(os.path.dirname(destination)):
             os.makedirs(os.path.dirname(destination))
         # record.set_Working()
         shutil.copy2(source, destination)
+        return True
+
+    @staticmethod
+    def get_md5(file_name):
+
+        BUFFER = 8192
+        md5 = hashlib.md5()
+        with open(file_name, 'rb') as f:
+            for chunk in iter(lambda: f.read(BUFFER), b''):
+                md5.update(chunk)
+        return md5.hexdigest()
+
+    # def build_report_packet(self):
+
 
 # class Worker2(object):
-    updateStatus = pyqtSignal(str)
+#     updateStatus = pyqtSignal(str)
 #     reporter = pyqtSignal(NameRecord)
 #     reset_progress = pyqtSignal(int)
 #     update_progress = pyqtSignal(int)

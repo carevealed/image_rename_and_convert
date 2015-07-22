@@ -10,6 +10,7 @@ import shutil
 import sys
 import types
 from PIL import Image, ImageFile, ImageFilter
+# from rename_files.worker import Worker2
 import copy
 from collections import namedtuple
 
@@ -748,7 +749,84 @@ class ReportFactory(metaclass=Singleton):
         self._database.commit()
         pass
 
+    def add_record2(self, record):
+        assert(isinstance(record, tuple))
+        original = None
+        access = None
+        master = None
+        # get original
+        # get master
+        # get access
 
+
+
+        for part in record:
+            if part.type == "Original":
+                original = part
+            elif part.type == "Access":
+                access = part
+            elif part.type == "Master":
+                master = part
+            else:
+                raise ValueError("Not a valid record type")
+
+            # print(part)
+            #FIXME: fix database issues
+        self._database.execute('INSERT INTO records('
+                               'job_id, project_id_prefix, project_id_number, object_id_prefix, object_id_number, ia_url) '
+                               'VALUES(?,?,?,?,?,?)',
+                               (self._current_batch, "record.project_id_prefix", "record.project_id_number", "record.object_id_prefix", "record.object_id_number", "record.ia_url"))
+        record_id = self._database.execute('SELECT LAST_INSERT_ROWID()').fetchone()['LAST_INSERT_ROWID()']
+        # add original into database
+        name = os.path.basename(original.old_name)
+        path = os.path.dirname(original.old_name)
+        query = 'INSERT INTO files '
+        query += '(type, file_name, file_location, md5, file_suffix, file_extension) '
+        query += 'VALUES("{}", "{}", "{}", "{}", "{}", "{}")'.format(original.type,
+                                                                     name,
+                                                                     path,
+                                                                     original.md5,
+                                                                     original.file_suffix,
+                                                                     original.file_extension)
+
+        self._database.execute(query)
+        source_id = self._database.execute('SELECT LAST_INSERT_ROWID()').fetchone()['LAST_INSERT_ROWID()']
+        name = os.path.basename(master.old_name)
+        path = os.path.dirname(master.old_name)
+        # Add master into database
+        query = 'INSERT INTO files '
+        query += '(type, file_name, file_location, md5, file_suffix, file_extension, source) '
+        query += 'VALUES("{}", "{}", "{}", "{}", "{}", "{}", "{}")'.format(master.type,
+                                                                           name,
+                                                                           path,
+                                                                           master.md5,
+                                                                           master.file_suffix,
+                                                                           original.file_extension,
+                                                                           source_id)
+        self._database.execute(query)
+        self._database.execute('INSERT INTO file_pairs('
+                               'record_id, source_id) '
+                               'VALUES(?,?)', (record_id, source_id))
+
+        # for access_file in access:
+        #     if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
+        #         print("File: {}".format(master))
+        if access:
+            name = os.path.basename(access.old_name)
+            path = os.path.dirname(access.old_name)
+            query = 'INSERT INTO files '
+            query += '(type, file_name, file_location, md5, file_suffix, file_extension, source) '
+            query += 'VALUES("{}", "{}", "{}", "{}", "{}", "{}", "{}")'.format(access.type,
+                                                                               name,
+                                                                               path,
+                                                                               access.md5,
+                                                                               access.file_suffix,
+                                                                               access.file_extension,
+                                                                               source_id)
+            self._database.execute(query)
+        self._database.commit()
+
+        pass
     def show_current_records(self, object_id=None):
         if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
             print("Getting record {0}.".format(object_id))

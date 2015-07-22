@@ -1,9 +1,10 @@
 import datetime
+import queue
 import time
 import threading
 from time import sleep
 import types
-from rename_files.jobModel import jobTreeNode, jobTreeModel, ObjectNode, PageNode, PageSideNode, NewFileNode, FileType, \
+from rename_files.jobModel import jobTreeNode, jobTreeModel, ObjectNode, PageNode, PageSideNode, NewFileNode, FileTypeCodes, \
     DataRows
 
 __author__ = 'California Audio Visual Preservation Project'
@@ -70,7 +71,7 @@ class MainDialog(QDialog, Ui_Form):
         # NON-UI data members
         self.pixmap = QPixmap()
         self.jobNumber = None
-
+        self.report_packets = []
         self.showPreview = True
         self._source = ""
         self._destination = None
@@ -78,12 +79,13 @@ class MainDialog(QDialog, Ui_Form):
         self._pid_startNum = 0
         self._oid_marc = ""
         self._oid_startNum = 0
-        self.reporter = ReportFactory(database=datafile, username="asd")  # TODO: add Username input
+        self.reporter = ReportFactory(database=datafile, username="CAPS")  # TODO: add Username input
         # self.copyEngine = Worker(self._destination)
-        self.copyEngine = Worker(self._destination)
+        # self.copyEngine = Worker(self._destination)
         self.reporter.initize_database()
         self.tree_files.setVisible(False)
-        self.status = ""
+        self.status = None
+        self.report_queues = Queue()
 
         # setup
 
@@ -205,14 +207,19 @@ class MainDialog(QDialog, Ui_Form):
         self.tree_filesView.clicked.connect(self._update_preview_window)
         self.checkBox_preview.clicked.connect(self._toggle_preview)
 
-        self.copyEngine.updateStatus.connect(self._update_statusbar)
-        self.copyEngine.reset_progress.connect(self._setup_progress_bar)
-        self.copyEngine.update_progress.connect(self._update_progress)
 
-        self.copyEngine.reporter.connect(self._add_record)
-        self.copyEngine.request_report.connect(self._run_reports)
-        self.copyEngine.error_reporter.connect(self._display_error)
+        # self.copyEngine.updateStatus.connect(self._update_statusbar)
+        # self.copyEngine.reset_progress.connect(self._setup_progress_bar)
+        # self.copyEngine.update_progress.connect(self._update_progress)
+		#
+		# self.copyEngine.reporter.connect(self._add_record)
+		# self.copyEngine.request_report.connect(self._run_reports)
+		# self.copyEngine.error_reporter.connect(self._display_error)
 
+    def _add_report_packet(self, packet):
+        print(str(packet))
+        self.report_packets.append(packet)
+        # self.report_queues.put(packet)
 
     def _update_preview_window(self):
         if self.showPreview:
@@ -249,9 +256,23 @@ class MainDialog(QDialog, Ui_Form):
 
             self.le_resolution.setText(resolution)
 
-    def update_status_message(self, message):
-        print(message)
-        self.status = message
+    def update_status_message(self, packet):
+        print(packet)
+        self.status = '<h3 align="left">\t{}</h3><br>' \
+                      '<table cellpadding="5">' \
+                      '<tr>' \
+                      '<th align="left">From:</th>' \
+                      '<td>{}</td>' \
+                      '</tr>' \
+                      '<tr>' \
+                      '<th align="left">As:</th>' \
+                      '<td>{}</td>' \
+                      '</tr>' \
+                      '<tr>' \
+                      '<th align="left">To:</th>' \
+                      '<td>{}</td>' \
+                      '</tr>'.format(packet.title, packet.s_file, packet.d_file, packet.path)
+        # self.status = packet
 
     def _toggle_preview(self):
         if self.showPreview:
@@ -335,6 +356,7 @@ class MainDialog(QDialog, Ui_Form):
                 job = q.get()
                 worker = Worker2(self._destination, packet=job)
                 worker.updateStatus.connect(self.update_status_message)
+                worker.job_completed.connect(self._add_report_packet)
                 worker.run()
             new_message = QLabel()
             new_message.setText(self.status)
@@ -345,14 +367,38 @@ class MainDialog(QDialog, Ui_Form):
             if progress.wasCanceled():
                 break
 
-            # print(i)
+            # print(i)q
             # print(self.status)
             if not worker.isRunning():
                 i += 1
+
                 q.task_done()
                 continue
 
             sleep(.01)
+        report_queues = self._sort_reports()
+        progress = QProgressDialog("Writing report", "Abort", 0, len(report_queues))
+        progress.setWindowModality(Qt.WindowModal)
+        progress.show()
+        i = 0
+        assert(isinstance(report_queues, tuple))
+        for i, record in enumerate(report_queues):
+            assert(isinstance(record, tuple))
+            # job = report_queues.get()
+            new_message = QLabel()
+            new_message.setText(self._generate_report_message(record))
+            new_message.setMargin(20)
+            # for i, packet in enumerate(job):
+            #     print(i, str(packet))
+            # QThread.sleep(100)
+            progress.setLabel(new_message)
+            self.reporter.add_record2(record)
+            progress.setValue(i)
+            # i += 1
+            # print(str(job))
+            # report_queues.task_done()
+
+
 
 
         # for i, job in enumerate(jobs):
@@ -371,6 +417,52 @@ class MainDialog(QDialog, Ui_Form):
         # self.copyEngine.builder.new_path = self._destination
         # self.copyEngine.setup(destination=self._destination, create_report=include_report, reporter=self.reporter)
         # self.copyEngine.start()
+    def _generate_report_message(self, record):
+        message = '<h3 align="center">Saving Record of Image</h3><br>' \
+                  '<table cellpadding="5">' \
+                  '<tr>' \
+                  '<th align="left">Object ID:</th>' \
+                  '<td>{}</td>' \
+                  '</tr>' \
+                  '</table>' \
+                  .format(record[0].object_id)
+                  # '<tr>' \
+                  # '<th align="left">New Name:</th>' \
+                  # '<td>{}</td>' \
+                  # '</tr>' \
+
+        return message
+
+    def _sort_reports(self):
+        reports = []
+        object_ids = []
+        # find all unique object ids
+        for packet in self.report_packets:
+            if not packet.object_id in object_ids:
+                object_ids.append(packet.object_id)
+
+        for id in object_ids:
+            object_packets = []
+            # find all packets with that unique ID
+            for packet in self.report_packets:
+                # create queue of tuples of packet ids
+                if packet.object_id == id:
+                    object_packets.append(packet)
+            original = Worker2.report_packet(old_name=object_packets[0].old_name,
+                                                  new_name=None,
+                                                  object_id=object_packets[0].object_id,
+                                                  type="Original",
+                                                  md5=Worker2.get_md5(object_packets[0].old_name),
+                                                  date=None,
+                                                  file_suffix=None,
+                                                  file_extension=os.path.splitext(object_packets[0].old_name)[0],
+                                                  notes=None)
+            object_packets.insert(0, original)
+
+            reports.append(tuple(object_packets))
+
+        # return that queue
+        return tuple(reports)
 
     def _show_report(self):
         job = self.reporter.current_batch
@@ -461,8 +553,12 @@ class MainDialog(QDialog, Ui_Form):
 
     def _update_data_status(self):
         if self.data.rowCount() > 0:
-            start_index = self.tree_filesView.selectedIndexes()[0]
-            end_index = self.tree_filesView.selectedIndexes()[-1]
+            start_index = self.data.index(0,0)
+
+            # start_index = self.tree_filesView.selectedIndexes()[0]
+            # start_index = self.tree_filesView.selectedIndexes()[0]
+            # end_index = self.tree_filesView.selectedIndexes()[-1]
+            end_index = self.data.index(self.data.rowCount()-1, self.data.columnCount(parent=self.data._root))
         else:
             start_index = QModelIndex()
             end_index = QModelIndex()
@@ -505,6 +601,7 @@ class MainDialog(QDialog, Ui_Form):
             self.lineEdit_validStatus.insert("Valid")
             self.lineEdit_validStatus.setStyleSheet(text_styles.VALID)
             self.pushButton_load_filles.setEnabled(True)
+            self.buttonRename.setEnabled(True)
             self.pushButton_update.setEnabled(True)
         else:
             self.lineEdit_validStatus.insert("Not Valid")
@@ -549,6 +646,8 @@ class MainDialog(QDialog, Ui_Form):
         # if record._status == RecordStatus.NEED_TO_APPEND_RECORD:
         #     self.reporter._add_access_files(record)
         self.reporter.add_record(record)
+
+
 
 
     def closeEvent(self, *args, **kwargs):
@@ -662,7 +761,7 @@ class MainDialog(QDialog, Ui_Form):
             self.data.removeRows(0, self.data.rowCount())
         jobTreeNode.total_active = 0
         # get all the files that match either tif or jpg
-        self.copyEngine.builder.clear_queues()
+        # self.copyEngine.builder.clear_queues()
         for root, subdirs, files in os.walk(source):
             index = 0
             for file in files:
@@ -690,6 +789,13 @@ class MainDialog(QDialog, Ui_Form):
 
                         # new_file_master = NewFileNodes("dfd_000001_master.tif", "Master", new_page_side)
                         # new_file_access = NewFileNodes("dfd_000001_access.jpg", "Access", new_page_side)
+                        newObject = ObjectNode(self._pid_prefix, self._oid_marc)
+                        new_page = PageNode(1, newObject)
+                        new_side = PageSideNode(page_side="", original_filename=newfile, parent=new_page)
+                        new_master = NewFileNode(FileTypeCodes.MASTER, copy=True, convert=False, parent=new_side)
+                        new_access = NewFileNode(FileTypeCodes.ACCESS, copy=False, convert=True, parent=new_side)
+                        self.data.add_object(newObject)
+
                         files_per_part.add_file2(file_name=newfile, file_type_to_create=FileTypes.MASTER)
                         files_per_part.add_file2(file_name=newfile, file_type_to_create=FileTypes.ACCESS, new_format=AccessExtensions.JPEG.value)
                 elif os.path.splitext(file)[1].lower() == '.jpg':
@@ -699,16 +805,21 @@ class MainDialog(QDialog, Ui_Form):
                     else:
                         # new_master = NewFileNode(FileType.MASTER, convert=False, parent=new_side)
                         files_per_part.add_file2(file_name=newfile, file_type_to_create=FileTypes.MASTER)
+                        newObject = ObjectNode(self._pid_prefix, self._oid_marc)
+                        new_page = PageNode(1, newObject)
+                        new_side = PageSideNode(page_side="", original_filename=newfile, parent=new_page)
+                        new_master = NewFileNode(FileTypeCodes.MASTER, copy=True, convert=False, parent=new_side)
+                        self.data.add_object(newObject)
                 else:
                     continue
                 if not smart_sorting:
-
+                    pass
                     # self.data.add_object(newObject)
-                    self.copyEngine.builder.add_queue([files_per_part],
-                                      obj_id_prefix=self._oid_marc,
-                                      obj_id_num=index + self._oid_startNum,
-                                      proj_id_prefix=self._pid_prefix,
-                                      proj_id_num=index + self._pid_startNum)
+                    # self.copyEngine.builder.add_queue([files_per_part],
+                    #                   obj_id_prefix=self._oid_marc,
+                    #                   obj_id_num=index + self._oid_startNum,
+                    #                   proj_id_prefix=self._pid_prefix,
+                    #                   proj_id_num=index + self._pid_startNum)
                 # if newObject:
                 #     self.data.add_object(newObject)
                 index += 1
@@ -730,8 +841,8 @@ class MainDialog(QDialog, Ui_Form):
                     if jpeg_name == os.path.splitext(os.path.basename(tiff))[0]:
                         new_page = PageNode(1, newObject)
                         new_side = PageSideNode(page_side="", original_filename=tiff, parent=new_page)
-                        new_master = NewFileNode(FileType.MASTER, convert=False, parent=new_side)
-                        new_access = NewFileNode(FileType.ACCESS, convert=True, parent=new_side)
+                        new_master = NewFileNode(FileTypeCodes.MASTER, copy=True, convert=False, parent=new_side)
+                        new_access = NewFileNode(FileTypeCodes.ACCESS, copy=False, convert=True, parent=new_side)
 
 
                         files_per_part.add_file2(file_name=tiff, file_type_to_create=FileTypes.MASTER)
@@ -747,15 +858,15 @@ class MainDialog(QDialog, Ui_Form):
                     # files_per_part.add_file(jpeg)
                     new_page = PageNode(1, newObject)
                     new_side = PageSideNode(page_side="", original_filename=jpeg, parent=new_page)
-                    new_master = NewFileNode(FileType.MASTER, convert=False, parent=new_side)
+                    new_master = NewFileNode(FileTypeCodes.MASTER, copy=True, convert=False, parent=new_side)
                     files_per_part.add_file2(file_name=jpeg, file_type_to_create=FileTypes.MASTER)
                     # files_per_part.add_file2(file_name=jpeg, file_type=FileTypes.ACCESS)
                 self.data.add_object(newObject)
-                self.copyEngine.builder.add_queue([files_per_part],
-                                                  obj_id_prefix=self._oid_marc,
-                                                  obj_id_num=index + self._oid_startNum,
-                                                  proj_id_prefix=self._pid_prefix,
-                                                  proj_id_num=index + self._pid_startNum)
+                # self.copyEngine.builder.add_queue([files_per_part],
+                #                                   obj_id_prefix=self._oid_marc,
+                #                                   obj_id_num=index + self._oid_startNum,
+                #                                   proj_id_prefix=self._pid_prefix,
+                #                                   proj_id_num=index + self._pid_startNum)
 
 
         # new_page = PageNode(33, newObject)

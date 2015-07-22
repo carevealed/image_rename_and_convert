@@ -19,9 +19,10 @@ class DataRows(Enum):
     INCLUDED_EXCLUDED = 8
     STATUS = 9
 
-class FileType(Enum):
+class FileTypeCodes(Enum):
     ACCESS = "access"
     MASTER = "prsv"
+
 
 class CollectionComplexity(Enum):
     EMPTY = "Empty"
@@ -174,7 +175,7 @@ class jobTreeModel(QAbstractItemModel):
                 return "Status"
 
     def get_active_jobs(self):
-        return self._root.get_jobs()
+        return self._root         .get_jobs()
     #     pass
 
     def update_object_numbers(self):
@@ -347,9 +348,9 @@ class jobTreeNode(object):
                 return "Page Side"
 
             if isinstance(self, NewFileNode):
-                if self._data.file_type == FileType.ACCESS:
+                if self._data.file_type == FileTypeCodes.ACCESS:
                     return "Access File"
-                if self._data.file_type == FileType.MASTER:
+                if self._data.file_type == FileTypeCodes.MASTER:
                     return "Master File"
 
 
@@ -469,6 +470,7 @@ class ObjectNode(jobTreeNode):
                                                file_type=None,
                                                included=self.included,
                                                needs_conversion=None,
+                                               needs_copying=None,
                                                status=None)
             # jobTreeNode.total_active += 1
 
@@ -513,18 +515,19 @@ class PageNode(jobTreeNode):
         self.page_numnber =page_number
         self.included = included
         self._data = types.SimpleNamespace(project_id_prefix=None,
-                                   project_id_number=None,
-                                   object_id_marc=None,
-                                   object_id_number=None,
-                                   simple_complex=None,
-                                   page_number=self.page_numnber,
-                                   page_side=None,
-                                   original_name=None,
-                                   new_name=None,
-                                   file_type=None,
-                                   included=self.included,
-                                   needs_conversion=None,
-                                   status=None)
+                                           project_id_number=None,
+                                           object_id_marc=None,
+                                           object_id_number=None,
+                                           simple_complex=None,
+                                           page_number=self.page_numnber,
+                                           page_side=None,
+                                           original_name=None,
+                                           new_name=None,
+                                           file_type=None,
+                                           included=self.included,
+                                           needs_conversion=None,
+                                           needs_copying=None,
+                                           status=None)
 
         if parent is not None:
             parent.addChild(self)
@@ -577,6 +580,7 @@ class PageSideNode(jobTreeNode):
                                            file_type=None,
                                            included=included,
                                            needs_conversion=None,
+                                           needs_copying=None,
                                            status=None)
         if parent is not None:
             parent.addChild(self)
@@ -616,8 +620,15 @@ class PageSideNode(jobTreeNode):
 
 
 class NewFileNode(jobTreeNode):
-    def __init__(self, file_type, convert, parent, included=True):
-        assert(isinstance(file_type, FileType))
+    job_packet = namedtuple('job_packet', ['old_name',
+                                           'new_name',
+                                           'object_id',
+                                           'copy_file',
+                                           'convert',
+                                           'file_suffix',
+                                           'file_generation'])
+    def __init__(self, file_type, convert, parent, copy=True, included=True):
+        assert(isinstance(file_type, FileTypeCodes))
         self._children = []
         self._parent = parent
         self._data = types.SimpleNamespace(project_id_prefix=None,
@@ -632,6 +643,7 @@ class NewFileNode(jobTreeNode):
                                            file_type=file_type,
                                            included=included,
                                            needs_conversion=convert,
+                                           needs_copying=copy,
                                            status=None)
         if parent is not None:
             parent.addChild(self)
@@ -653,13 +665,21 @@ class NewFileNode(jobTreeNode):
         self.update_id_numbers()
 
     def get_jobs(self):
-        job_packet = namedtuple('job_packet', ['old_name', 'new_name', 'object_id', 'copy_file', 'convert'])
+
         if self._data.included:
-            packet = job_packet(old_name=self.data(DataRows.ORIGINAL_NAME.value),
-                                new_name=self.data(DataRows.NEW_NAME.value),
-                                object_id=self._data.project_id_prefix + "_" + str(self._data.project_id_number).zfill(6),
-                                copy_file=True,
-                                convert=self._data.needs_conversion)
+            if self._data.file_type == FileTypeCodes.ACCESS:
+                generation = "Access"
+            elif self._data.file_type == FileTypeCodes.MASTER:
+                generation = "Master"
+            else:
+                generation = None
+            packet = self.job_packet(old_name=self.data(DataRows.ORIGINAL_NAME.value),
+                                     new_name=self.data(DataRows.NEW_NAME.value),
+                                     object_id=self._data.project_id_prefix + "_" + str(self._data.project_id_number).zfill(6),
+                                     copy_file=self._data.needs_copying,
+                                     convert=self._data.needs_conversion,
+                                     file_suffix=self._data.file_type,
+                                     file_generation=generation)
             return packet
 
     def type_info(self):
