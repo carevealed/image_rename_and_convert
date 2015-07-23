@@ -45,7 +45,7 @@ class running_mode(Enum):
     BUIDING = 2
     TESTING = 3
 
-MODE = running_mode.DEBUG
+MODE = running_mode.NORMAL
 datafile = None
 
 
