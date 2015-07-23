@@ -175,7 +175,7 @@ class jobTreeModel(QAbstractItemModel):
                 return "Status"
 
     def get_active_jobs(self):
-        return self._root         .get_jobs()
+        return self._root.get_jobs()
     #     pass
 
     def update_object_numbers(self):
@@ -461,7 +461,7 @@ class ObjectNode(jobTreeNode):
             self._data = types.SimpleNamespace(project_id_prefix=jobTreeNode.pid_prefix,
                                                project_id_number=jobTreeNode.oid_start_num + jobTreeNode.total_active,
                                                object_id_marc=jobTreeNode.oid_marc,
-                                               object_id_number=jobTreeNode.pid_start_num + jobTreeNode.total_active,
+                                               object_id_number=jobTreeNode.oid_start_num + jobTreeNode.total_active,
                                                simple_complex=None,
                                                page_number=None,
                                                page_side=None,
@@ -683,7 +683,7 @@ class NewFileNode(jobTreeNode):
                                      project_id_number=self._data.project_id_number,
                                      object_id_marc=self._data.object_id_marc,
                                      object_id_number=self._data.object_id_number,
-                                     object_id=self._data.project_id_prefix + "_" + str(self._data.project_id_number).zfill(6),
+                                     object_id=self._data.object_id_marc + "_" + str(self._data.object_id_number).zfill(6),
                                      copy_file=self._data.needs_copying,
                                      convert=self._data.needs_conversion,
                                      file_suffix=self._data.file_type,

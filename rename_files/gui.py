@@ -15,6 +15,7 @@ from PIL import Image
 from rename_files.renaming_model import RenameFactory, ReportFactory, record_bundle, FileTypes, AccessExtensions, \
     NameRecord, RecordStatus
 from rename_files.gui_datafiles.report_gui import Ui_dlg_report
+from rename_files.complex_gui import ComplexDialog
 from rename_files.worker import Worker, Worker2
 from enum import Enum
 import sys
@@ -198,6 +199,7 @@ class MainDialog(QDialog, Ui_Form):
         self.pushButton_load_filles.clicked.connect(self._load_files_click)
         self.pushButton_load_filles.clicked.connect(self._load_files_click)
         self.pushButton_update.clicked.connect(self.update_click)
+        self.pushButton_add_complex.clicked.connect(self._add_complex)
 
         self.pushButton_group.clicked.connect(self._group_selected)
 
@@ -411,6 +413,7 @@ class MainDialog(QDialog, Ui_Form):
             # i += 1
             # print(str(job))
             # report_queues.task_done()
+        progress.setLabelText("Report Saved")
 
         if include_report:
             print("Opening report")
@@ -485,6 +488,12 @@ class MainDialog(QDialog, Ui_Form):
         # return that queue
         return tuple(reports)
 
+    def _add_complex(self):
+        complex_window = ComplexDialog()
+        complex_window.exec_()
+        complex_object = complex_window.bundle
+        print(complex_object)
+
     def _show_report(self):
         job = self.reporter.current_batch
         report = ReportDialog(job)
@@ -508,7 +517,7 @@ class MainDialog(QDialog, Ui_Form):
 
             elif res == QMessageBox.No:
                 # Ask user for another name
-                save_box = QFileDialog.getSaveFileName(self, 'Save file', self.copyEngine.builder.new_path, "CSV (*.csv);;All Files (*)")
+                save_box = QFileDialog.getSaveFileName(self, 'Save file', self._destination, "CSV (*.csv);;All Files (*)")
 
     def _run_reports(self):
         checked = self.checkBox_IncludeReport.isChecked()

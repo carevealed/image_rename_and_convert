@@ -124,22 +124,16 @@
             <enum>QFrame::Raised</enum>
            </property>
            <layout class="QGridLayout" name="gridLayout_4">
-            <item row="3" column="2">
-             <widget class="QLabel" name="label_OID_startNum">
+            <item row="4" column="1" colspan="3">
+             <widget class="QLineEdit" name="lineEdit_validStatus">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
-              <property name="text">
-               <string>Start Number:</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-              </property>
-              <property name="buddy">
-               <cstring>lineEdit_OID_startNum</cstring>
+              <property name="readOnly">
+               <bool>true</bool>
               </property>
              </widget>
             </item>
@@ -162,38 +156,6 @@
               </property>
              </widget>
             </item>
-            <item row="0" column="0">
-             <widget class="QLabel" name="label_source">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="text">
-               <string>Source:</string>
-              </property>
-              <property name="buddy">
-               <cstring>lineEdit_source</cstring>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_destination">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="text">
-               <string>Destination:</string>
-              </property>
-              <property name="buddy">
-               <cstring>lineEdit_destination</cstring>
-              </property>
-             </widget>
-            </item>
             <item row="2" column="3">
              <widget class="QLineEdit" name="lineEdit_PID_startNum">
               <property name="sizePolicy">
@@ -210,6 +172,22 @@
               </property>
               <property name="text">
                <string>1</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0">
+             <widget class="QLabel" name="label_validStatus">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>Status:</string>
+              </property>
+              <property name="buddy">
+               <cstring>lineEdit_validStatus</cstring>
               </property>
              </widget>
             </item>
@@ -261,8 +239,8 @@
               </property>
              </widget>
             </item>
-            <item row="4" column="0">
-             <widget class="QLabel" name="label_validStatus">
+            <item row="3" column="2">
+             <widget class="QLabel" name="label_OID_startNum">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                 <horstretch>0</horstretch>
@@ -270,95 +248,13 @@
                </sizepolicy>
               </property>
               <property name="text">
-               <string>Status:</string>
+               <string>Start Number:</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
               </property>
               <property name="buddy">
-               <cstring>lineEdit_validStatus</cstring>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="1" colspan="3">
-             <widget class="QLineEdit" name="lineEdit_validStatus">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="readOnly">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="1">
-             <widget class="QLineEdit" name="lineEdit_OID_MARC">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="0">
-             <widget class="QLabel" name="label_OID_MARC">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="text">
-               <string>Object ID MARC:</string>
-              </property>
-              <property name="buddy">
-               <cstring>lineEdit_OID_MARC</cstring>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="6">
-             <widget class="QComboBox" name="cb_searchType">
-              <item>
-               <property name="text">
-                <string>Smart</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>All</string>
-               </property>
-              </item>
-             </widget>
-            </item>
-            <item row="6" column="6">
-             <widget class="QPushButton" name="pushButton_load_filles">
-              <property name="enabled">
-               <bool>false</bool>
-              </property>
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="text">
-               <string>Load Files</string>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="5">
-             <widget class="QLabel" name="lbl_searchType">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="text">
-               <string>Search type</string>
-              </property>
-              <property name="buddy">
-               <cstring>cb_searchType</cstring>
+               <cstring>lineEdit_OID_startNum</cstring>
               </property>
              </widget>
             </item>
@@ -393,6 +289,78 @@
               </property>
              </widget>
             </item>
+            <item row="3" column="1">
+             <widget class="QLineEdit" name="lineEdit_OID_MARC">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="5">
+             <widget class="QLabel" name="lbl_searchType">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>Search type</string>
+              </property>
+              <property name="buddy">
+               <cstring>cb_searchType</cstring>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="6">
+             <widget class="QComboBox" name="cb_searchType">
+              <item>
+               <property name="text">
+                <string>Smart</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>All</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item row="6" column="6">
+             <widget class="QPushButton" name="pushButton_load_filles">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>Load Files</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QLabel" name="label_OID_MARC">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>Object ID MARC:</string>
+              </property>
+              <property name="buddy">
+               <cstring>lineEdit_OID_MARC</cstring>
+              </property>
+             </widget>
+            </item>
             <item row="1" column="6">
              <widget class="QPushButton" name="pushButton_destinationBrowse">
               <property name="sizePolicy">
@@ -412,11 +380,50 @@
               </property>
              </widget>
             </item>
+            <item row="0" column="1" colspan="5">
+             <widget class="QLineEdit" name="lineEdit_source"/>
+            </item>
             <item row="1" column="1" colspan="5">
              <widget class="QLineEdit" name="lineEdit_destination"/>
             </item>
-            <item row="0" column="1" colspan="5">
-             <widget class="QLineEdit" name="lineEdit_source"/>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_destination">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>Destination:</string>
+              </property>
+              <property name="buddy">
+               <cstring>lineEdit_destination</cstring>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_source">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>Source:</string>
+              </property>
+              <property name="buddy">
+               <cstring>lineEdit_source</cstring>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="6">
+             <widget class="QPushButton" name="pushButton_add_complex">
+              <property name="text">
+               <string>Add Complex Object</string>
+              </property>
+             </widget>
             </item>
            </layout>
            <zorder>label_source</zorder>
@@ -438,6 +445,7 @@
            <zorder>lbl_searchType</zorder>
            <zorder>pushButton_sourceBrowse</zorder>
            <zorder>pushButton_destinationBrowse</zorder>
+           <zorder>pushButton_add_complex</zorder>
           </widget>
          </item>
         </layout>
@@ -826,7 +834,6 @@
               <zorder>checkBox_preview</zorder>
               <zorder>horizontalSpacer_4</zorder>
               <zorder>pushButton_update</zorder>
-              <zorder>horizontalLayoutWidget</zorder>
              </widget>
             </item>
            </layout>

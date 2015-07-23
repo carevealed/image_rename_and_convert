@@ -163,7 +163,11 @@ class Worker2(QThread):
         # self.job_completed.emit(new_packet)
 
         # If needed convert file to new format
-        new_name = os.path.join(self._path, self._packet.new_name)
+        new_path = os.path.join(self._path, self._packet.object_id)
+        if not os.path.exists(new_path):
+            # Create new directory if doesn't exist
+            os.makedirs(new_path)
+        new_name = os.path.join(new_path, self._packet.new_name)
         extension = os.path.splitext(self._packet.new_name)[1]
 
         if self._packet.convert:
@@ -172,7 +176,7 @@ class Worker2(QThread):
             self.updateStatus.emit(self.status_packet(title="Converting new files",
                                                       s_file=self._packet.old_name,
                                                       d_file=self._packet.new_name,
-                                                      path=self._packet))
+                                                      path=new_path))
             if not self.convert_format(self._packet.old_name, new_name):
                 raise WorkerException(self._packet.old_name, " failed to convert.")
 
@@ -181,6 +185,7 @@ class Worker2(QThread):
                                                       d_file=None,
                                                       path=None))
             checksum = self.get_md5(new_name)
+            self._save_as_file(checksum, os.path.join(new_path, self._packet.new_name + ".md5"))
             date = ctime()
 
             new_packet = self.report_packet(old_name=self._packet.old_name,
@@ -203,7 +208,7 @@ class Worker2(QThread):
             self.updateStatus.emit(self.status_packet(title="Copying Files",
                                                       s_file=self._packet.old_name,
                                                       d_file=self._packet.new_name,
-                                                      path=self._path))
+                                                      path=new_path))
             # self.updateStatus.emit('<h3 align="center">Copying files</h3><br>'
             #                        '<table cellpadding="5">'
             #                        '<tr>'
@@ -222,9 +227,10 @@ class Worker2(QThread):
             #                        # '<p align="left">As:\t{}</p>\n'
             #                        # '<p align="left">To:\t{}</p>'
             #                        .format(self._packet.old_name, self._packet.new_name, self._path))
-            if not self.copy_files(self._packet.old_name, os.path.join(self._path, self._packet.new_name)):
+            if not self.copy_files(self._packet.old_name, new_name):
                 raise WorkerException(self._packet.old_name, " failed to copy.")
             checksum = self.get_md5(new_name)
+            Worker2._save_as_file(checksum, os.path.join(new_path, self._packet.new_name + ".md5"))
             date = ctime()
             extension = os.path.splitext(new_name)[1]
             new_packet = self.report_packet(old_name=self._packet.old_name,
@@ -266,6 +272,12 @@ class Worker2(QThread):
         img.close()
         return True
 
+    @staticmethod
+    def _save_as_file(checksum, file_name):
+        print("Saving checksum, {}, into {}".format(checksum, file_name))
+        with open(file_name, "w") as f:
+            f.write(checksum)
+            pass
     def copy_files(self, source, destination):
         if not os.path.exists(os.path.dirname(destination)):
             os.makedirs(os.path.dirname(destination))
