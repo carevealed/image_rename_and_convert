@@ -283,7 +283,7 @@ class jobTreeNode(object):
                 if self._data.included:
                     new_name = self._data.object_id_marc + "_" + str(self._data.object_id_number).zfill(6)
                     # print(self._parent._parent.childCount())
-                    if self._parent._parent.childCount() > 1:
+                    if self._parent._parent._parent.childCount() > 1:
                         new_name += "_"
                         new_name += str(self._data.page_number).zfill(2)
                     if self._data.page_side:
@@ -626,6 +626,7 @@ class NewFileNode(jobTreeNode):
                                            'project_id_number',
                                            'object_id_marc',
                                            'object_id_number',
+                                           'part_number',
                                            'object_id',
                                            'copy_file',
                                            'convert',
@@ -683,6 +684,7 @@ class NewFileNode(jobTreeNode):
                                      project_id_number=self._data.project_id_number,
                                      object_id_marc=self._data.object_id_marc,
                                      object_id_number=self._data.object_id_number,
+                                     part_number=self._data.page_number,
                                      object_id=self._data.object_id_marc + "_" + str(self._data.object_id_number).zfill(6),
                                      copy_file=self._data.needs_copying,
                                      convert=self._data.needs_conversion,

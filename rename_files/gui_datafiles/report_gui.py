@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/Users/lpsdesk/PycharmProjects/rename_files/rename_files/gui_datafiles/report.ui'
 #
-# Created: Wed Jun 24 15:53:38 2015
+# Created: Thu Jul 23 15:41:40 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,7 +26,7 @@ except AttributeError:
 class Ui_dlg_report(object):
     def setupUi(self, dlg_report):
         dlg_report.setObjectName(_fromUtf8("dlg_report"))
-        dlg_report.resize(650, 250)
+        dlg_report.resize(900, 371)
         dlg_report.setMinimumSize(QtCore.QSize(650, 250))
         self.verticalLayout = QtGui.QVBoxLayout(dlg_report)
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
@@ -73,6 +73,6 @@ class Ui_dlg_report(object):
         item = self.tableWidget.horizontalHeaderItem(5)
         item.setText(_translate("dlg_report", "Internet Archive URL", None))
         item = self.tableWidget.horizontalHeaderItem(6)
-        item.setText(_translate("dlg_report", "Username", None))
+        item.setText(_translate("dlg_report", "Technical Notes", None))
         self.pushButton.setText(_translate("dlg_report", "Close", None))
 

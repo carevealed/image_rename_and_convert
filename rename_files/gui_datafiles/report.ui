@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>650</width>
-    <height>250</height>
+    <width>900</width>
+    <height>371</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -60,7 +60,7 @@
      </column>
      <column>
       <property name="text">
-       <string>Username</string>
+       <string>Technical Notes</string>
       </property>
      </column>
     </widget>

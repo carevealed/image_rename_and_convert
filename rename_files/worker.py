@@ -1,7 +1,7 @@
 import hashlib
 import os
 import threading
-from time import sleep, ctime
+from time import sleep, ctime, time
 import shutil
 from PIL import Image, ImageFilter
 
@@ -118,6 +118,7 @@ class Worker2(QThread):
                                                  'project_id_number',
                                                  'object_id_marc',
                                                  'object_id_number',
+                                                 'part_number',
                                                  'object_id',
                                                  'type',
                                                  'md5',
@@ -134,6 +135,7 @@ class Worker2(QThread):
         print("Worker initiated")
         self._packet = packet
         self._path = path
+        self.notes = []
 
 
     def run(self):
@@ -194,13 +196,14 @@ class Worker2(QThread):
                                             project_id_number=self._packet.project_id_number,
                                             object_id_marc=self._packet.object_id_marc,
                                             object_id_number=self._packet.object_id_number,
+                                            part_number=self._packet.part_number,
                                             object_id=self._packet.object_id,
                                             type=self._packet.file_generation,
                                             md5=checksum,
                                             date=date, # TODO change to date Created
                                             file_suffix=self._packet.file_suffix,
                                             file_extension=extension,
-                                            notes=None)
+                                            notes=self.notes)
             self.job_completed.emit(new_packet)
 
         # If needed copy the file to the new destination
@@ -233,19 +236,21 @@ class Worker2(QThread):
             Worker2._save_as_file(checksum, os.path.join(new_path, self._packet.new_name + ".md5"))
             date = ctime()
             extension = os.path.splitext(new_name)[1]
+
             new_packet = self.report_packet(old_name=self._packet.old_name,
                                             new_name=self._packet.new_name,
                                             project_id_prefix=self._packet.project_id_prefix,
                                             project_id_number=self._packet.project_id_number,
                                             object_id_marc=self._packet.object_id_marc,
                                             object_id_number=self._packet.object_id_number,
+                                            part_number=self._packet.part_number,
                                             object_id=self._packet.object_id,
                                             type=self._packet.file_generation,
                                             md5=checksum,
                                             date=date, # TODO change to date Created
                                             file_suffix=self._packet.file_suffix,
                                             file_extension=extension,
-                                            notes=None)
+                                            notes=self.notes)
             self.job_completed.emit(new_packet)
 
 
@@ -253,16 +258,23 @@ class Worker2(QThread):
 
     def convert_format(self, source, destination):
         print("Converting")
+        self.notes.append("{}: Read the original file headers.".format(ctime()))
         img = Image.open(source)
         if img.mode == '1':
-            # blur the image to make it compress better
-            img = img.convert('RGB')
-            img = img.filter(ImageFilter.GaussianBlur(3))
-        img = img.convert('RGB')
+            self.notes.append("{}: Determined that the file is 1 bit so extra processing is required.".format(ctime()))
 
+            # blur the image to make it compress better
+            self.notes.append("{}: File converted to RGB colorspace.".format(ctime()))
+            img = img.convert('RGB')
+            self.notes.append("{}: Added gaussian blur of 3 pixels to help.".format(ctime()))
+            img = img.filter(ImageFilter.GaussianBlur(3))
+        else:
+            img = img.convert('RGB')
+            self.notes.append("{}: File converted to RGB colorspace.".format(ctime()))
 
 
             # raise AmbiguousMode(file['source'])
+        self.notes.append(("{}: Saved converted image to jpeg.".format(ctime())))
         img.save(destination,
                  'jpeg',
                  icc_profile=img.info.get("icc_profile"),
@@ -274,7 +286,7 @@ class Worker2(QThread):
 
     @staticmethod
     def _save_as_file(checksum, file_name):
-        print("Saving checksum, {}, into {}".format(checksum, file_name))
+        # print("Saving checksum, {}, into {}".format(checksum, file_name))
         with open(file_name, "w") as f:
             f.write(checksum)
             pass
@@ -283,6 +295,7 @@ class Worker2(QThread):
             os.makedirs(os.path.dirname(destination))
         # record.set_Working()
         shutil.copy2(source, destination)
+        self.notes.append("{}: Copied file with file metadata using Python's shutil.copy2() operation.".format(ctime()))
         return True
 
     @staticmethod

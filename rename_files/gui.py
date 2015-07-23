@@ -4,6 +4,7 @@ import time
 import threading
 from time import sleep
 import types
+from operator import attrgetter
 from rename_files.jobModel import jobTreeNode, jobTreeModel, ObjectNode, PageNode, PageSideNode, NewFileNode, FileTypeCodes, \
     DataRows
 
@@ -399,7 +400,7 @@ class MainDialog(QDialog, Ui_Form):
         i = 0
         assert(isinstance(report_queues, tuple))
         for i, record in enumerate(report_queues):
-            assert(isinstance(record, tuple))
+            # assert(isinstance(record, tuple))
             # job = report_queues.get()
             new_message = QLabel()
             new_message.setText(self._generate_report_message(record))
@@ -464,26 +465,34 @@ class MainDialog(QDialog, Ui_Form):
         for id in object_ids:
             object_packets = []
             # find all packets with that unique ID
+            parts_numbers = []
+            originals = []
             for packet in self.report_packets:
                 # create queue of tuples of packet ids
                 if packet.object_id == id:
                     object_packets.append(packet)
-            original = Worker2.report_packet(old_name=object_packets[0].old_name,
-                                             new_name=None,
-                                             project_id_prefix=object_packets[0].project_id_prefix,
-                                             project_id_number=object_packets[0].project_id_number,
-                                             object_id_marc=object_packets[0].object_id_marc,
-                                             object_id_number=object_packets[0].object_id_number,
-                                             object_id=object_packets[0].object_id,
-                                             type="Original",
-                                             md5=Worker2.get_md5(object_packets[0].old_name),
-                                             date=None,
-                                             file_suffix=None,
-                                             file_extension=os.path.splitext(object_packets[0].old_name)[1],
-                                             notes=None)
-            object_packets.insert(0, original)
+                    if packet.part_number not in parts_numbers:
+                        originals.append(packet)
+                        parts_numbers.append(packet.part_number)
+            for part in originals:
+                original = Worker2.report_packet(old_name=part.old_name,
+                                                 new_name=None,
+                                                 project_id_prefix=part.project_id_prefix,
+                                                 project_id_number=part.project_id_number,
+                                                 object_id_marc=part.object_id_marc,
+                                                 object_id_number=part.object_id_number,
+                                                 object_id=part.object_id,
+                                                 part_number=part.part_number,
+                                                 type="Original",
+                                                 md5=Worker2.get_md5(part.old_name),
+                                                 date=None,
+                                                 file_suffix=None,
+                                                 file_extension=os.path.splitext(part.old_name)[1],
+                                                 notes=None)
+                object_packets.append(original)
 
-            reports.append(tuple(object_packets))
+            object_packets = sorted(object_packets, key=attrgetter('part_number', 'type'))
+            reports.append(object_packets)
 
         # return that queue
         return tuple(reports)
@@ -492,7 +501,16 @@ class MainDialog(QDialog, Ui_Form):
         complex_window = ComplexDialog()
         complex_window.exec_()
         complex_object = complex_window.bundle
-        print(complex_object)
+        if complex_object:
+            new_complex_object = ObjectNode(self._pid_prefix, self._oid_marc)
+            for index, page in enumerate(complex_object):
+                new_page = PageNode(index + 1, new_complex_object)
+                new_side = PageSideNode(page_side="", original_filename=page, parent=new_page)
+                new_master = NewFileNode(FileTypeCodes.MASTER, copy=True, convert=False, parent=new_side)
+                new_access = NewFileNode(FileTypeCodes.ACCESS, copy=False, convert=True, parent=new_side)
+
+            self.data.add_object(new_complex_object)
+            print(complex_object)
 
     def _show_report(self):
         job = self.reporter.current_batch
@@ -952,6 +970,7 @@ class ReportDialog(QDialog, Ui_dlg_report):
             self.tableWidget.setItem(row, 3, QTableWidgetItem(record['new_name']))
             self.tableWidget.setItem(row, 4, QTableWidgetItem(record['new_md5']))
             self.tableWidget.setItem(row, 5, QTableWidgetItem(record['ia_url']))
+            self.tableWidget.setItem(row, 6, QTableWidgetItem(record['notes']))
 
 
 def start_gui(database, folder=None):

@@ -2,7 +2,7 @@ from enum import Enum, unique
 import filecmp
 import hashlib
 import threading
-from operator import itemgetter
+from operator import itemgetter, attrgetter
 import os
 from os.path import expanduser
 import sqlite3
@@ -13,6 +13,8 @@ from PIL import Image, ImageFile, ImageFilter
 # from rename_files.worker import Worker2
 import copy
 from collections import namedtuple
+import itertools
+
 
 @unique
 class running_mode(Enum):
@@ -674,6 +676,8 @@ class ReportFactory(metaclass=Singleton):
             # self._database.execute('UPDATE file_pairs'
             #                        'set record_id, source_id) '
             #                        'VALUES(?,?)', (record_id, source_id))
+
+    @DeprecationWarning
     def add_record(self, record):
         if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
             print("Adding record")
@@ -685,14 +689,15 @@ class ReportFactory(metaclass=Singleton):
                                'VALUES(?,?,?,?,?,?)',
                                (self._current_batch, record.project_id_prefix, record.project_id_number, record.object_id_prefix, record.object_id_number, record.ia_url))
         record_id = self._database.execute('SELECT LAST_INSERT_ROWID()').fetchone()['LAST_INSERT_ROWID()']
-        master = None
-        original = None
-        access = []
+
         for part in record.parts:
+            master = []
+            original = None
+            access = []
             for file in part:
                 #FIXME: Something is getting mislabled as a access file after being copyied
                 if file.file_type == FileTypes.MASTER:
-                    master = file
+                    master.append(file)
                 elif file.file_type == FileTypes.ACCESS:
                     access.append(file)
                 elif file.file_type == FileTypes.ORIGINAL:
@@ -700,57 +705,58 @@ class ReportFactory(metaclass=Singleton):
                 else:
                     raise ValueError
 
-        if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
-            print("File: {}".format(master))
-
-        # add original into database
-        query = 'INSERT INTO files '
-        query += '(type, file_name, file_location, md5, file_suffix, file_extension) '
-        query += 'VALUES("{}", "{}", "{}", "{}", "{}", "{}")'.format(original.file_type.value,
-                                                                     original.source,
-                                                                     original.file_path,
-                                                                     original.md5,
-                                                                     original.file_suffix,
-                                                                     os.path.splitext(master.filename)[1])
-        self._database.execute(query)
-
-        source_id = self._database.execute('SELECT LAST_INSERT_ROWID()').fetchone()['LAST_INSERT_ROWID()']
-
-
-        # Add master into database
-        query = 'INSERT INTO files '
-        query += '(type, file_name, file_location, md5, file_suffix, file_extension, source) '
-        query += 'VALUES("{}", "{}", "{}", "{}", "{}", "{}", "{}")'.format(master.file_type.value,
-                                                                           master.filename,
-                                                                           master.file_path,
-                                                                           master.md5,
-                                                                           master.file_suffix,
-                                                                           os.path.splitext(master.filename)[1],
-                                                                           source_id)
-        self._database.execute(query)
-        self._database.execute('INSERT INTO file_pairs('
-                               'record_id, source_id) '
-                               'VALUES(?,?)', (record_id, source_id))
-
-        for access_file in access:
             if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
                 print("File: {}".format(master))
+
+            # add original into database
             query = 'INSERT INTO files '
-            query += '(type, file_name, file_location, md5, file_suffix, file_extension, source) '
-            query += 'VALUES("{}", "{}", "{}", "{}", "{}", "{}", "{}")'.format(access_file.file_type.value,
-                                                                               access_file.filename,
-                                                                               access_file.file_path,
-                                                                               access_file.md5,
-                                                                               access_file.file_suffix,
-                                                                               os.path.splitext(access_file.filename)[1],
-                                                                               os.path.splitext(access_file.filename)[1],
-                                                                               source_id)
+            query += '(type, file_name, file_location, md5, file_suffix, file_extension) '
+            query += 'VALUES("{}", "{}", "{}", "{}", "{}", "{}")'.format(original.file_type.value,
+                                                                         original.source,
+                                                                         original.file_path,
+                                                                         original.md5,
+                                                                         original.file_suffix,
+                                                                         os.path.splitext(master[0].filename)[1])
             self._database.execute(query)
+
+            source_id = self._database.execute('SELECT LAST_INSERT_ROWID()').fetchone()['LAST_INSERT_ROWID()']
+
+
+            # Add master into database
+            for master_file in master:
+                query = 'INSERT INTO files '
+                query += '(type, file_name, file_location, md5, file_suffix, file_extension, source) '
+                query += 'VALUES("{}", "{}", "{}", "{}", "{}", "{}", "{}")'.format(master_file.value,
+                                                                                   master_file.filename,
+                                                                                   master_file.file_path,
+                                                                                   master_file.md5,
+                                                                                   master_file.file_suffix,
+                                                                                   os.path.splitext(master_file.filename)[1],
+                                                                                   source_id)
+                self._database.execute(query)
+            self._database.execute('INSERT INTO file_pairs('
+                                   'record_id, source_id) '
+                                   'VALUES(?,?)', (record_id, source_id))
+
+            for access_file in access:
+                if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
+                    print("File: {}".format(master))
+                query = 'INSERT INTO files '
+                query += '(type, file_name, file_location, md5, file_suffix, file_extension, source) '
+                query += 'VALUES("{}", "{}", "{}", "{}", "{}", "{}", "{}")'.format(access_file.file_type.value,
+                                                                                   access_file.filename,
+                                                                                   access_file.file_path,
+                                                                                   access_file.md5,
+                                                                                   access_file.file_suffix,
+                                                                                   os.path.splitext(access_file.filename)[1],
+                                                                                   os.path.splitext(access_file.filename)[1],
+                                                                                   source_id)
+                self._database.execute(query)
         self._database.commit()
-        pass
+        # pass
 
     def add_record2(self, record):
-        assert(isinstance(record, tuple))
+        # assert(isinstance(record, tuple))
         original = None
         access = None
         master = None
@@ -758,78 +764,88 @@ class ReportFactory(metaclass=Singleton):
         # get master
         # get access
 
+        total_parts = max(record, key=attrgetter('part_number'))
+        parts = []
+        for key, group in itertools.groupby(record, key=attrgetter('part_number')):
+            parts = list(group)
+            for part in parts:
 
+                if part.type == "Original":
+                    original = part
+                elif part.type == "Access":
+                    access = part
+                elif part.type == "Master":
+                    master = part
+                else:
+                    raise ValueError("Not a valid record type")
 
-        for part in record:
-            if part.type == "Original":
-                original = part
-            elif part.type == "Access":
-                access = part
-            elif part.type == "Master":
-                master = part
-            else:
-                raise ValueError("Not a valid record type")
+                # print(part)
 
-            # print(part)
-            #FIXME: fix database issues
-
-        ia_url = "https://archive.org/details/" + original.object_id
-        self._database.execute('INSERT INTO records('
-                               'job_id, project_id_prefix, project_id_number, object_id_prefix, object_id_number, ia_url) '
-                               'VALUES(?,?,?,?,?,?)',
-                               (self._current_batch,
-                                original.project_id_prefix,
-                                original.project_id_number,
-                                original.object_id_marc,
-                                original.object_id_number,
-                                ia_url))
-        record_id = self._database.execute('SELECT LAST_INSERT_ROWID()').fetchone()['LAST_INSERT_ROWID()']
-        # add original into database
-        name = os.path.basename(original.old_name)
-        path = os.path.dirname(original.old_name)
-        query = 'INSERT INTO files '
-        query += '(type, file_name, file_location, md5, file_extension) '
-        query += 'VALUES("{}", "{}", "{}", "{}", "{}")'.format(original.type,
-                                                               name,
-                                                               path,
-                                                               original.md5,
-                                                               original.file_extension)
-
-        self._database.execute(query)
-        source_id = self._database.execute('SELECT LAST_INSERT_ROWID()').fetchone()['LAST_INSERT_ROWID()']
-        name = os.path.basename(master.new_name)
-        path = os.path.dirname(master.new_name)
-        # Add master into database
-        query = 'INSERT INTO files '
-        query += '(type, file_name, file_location, md5, file_suffix, file_extension, source) '
-        query += 'VALUES("{}", "{}", "{}", "{}", "{}", "{}", "{}")'.format(master.type,
-                                                                           name,
-                                                                           path,
-                                                                           master.md5,
-                                                                           master.file_suffix.value,
-                                                                           master.file_extension,
-                                                                           source_id)
-        self._database.execute(query)
-        self._database.execute('INSERT INTO file_pairs('
-                               'record_id, source_id) '
-                               'VALUES(?,?)', (record_id, source_id))
-
-        # for access_file in access:
-        #     if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
-        #         print("File: {}".format(master))
-        if access:
-            name = os.path.basename(access.new_name)
-            path = os.path.dirname(access.new_name)
+            ia_url = "https://archive.org/details/" + original.object_id
+            self._database.execute('INSERT INTO records('
+                                   'job_id, project_id_prefix, project_id_number, object_id_prefix, object_id_number, ia_url) '
+                                   'VALUES(?,?,?,?,?,?)',
+                                   (self._current_batch,
+                                    original.project_id_prefix,
+                                    original.project_id_number,
+                                    original.object_id_marc,
+                                    original.object_id_number,
+                                    ia_url))
+            record_id = self._database.execute('SELECT LAST_INSERT_ROWID()').fetchone()['LAST_INSERT_ROWID()']
+            # add original into database
+            # for part in originals:
+            name = os.path.basename(original.old_name)
+            path = os.path.dirname(original.old_name)
             query = 'INSERT INTO files '
-            query += '(type, file_name, file_location, md5, file_suffix, file_extension, source) '
-            query += 'VALUES("{}", "{}", "{}", "{}", "{}", "{}", "{}")'.format(access.type,
+            query += '(type, file_name, file_location, md5, file_extension) '
+            query += 'VALUES("{}", "{}", "{}", "{}", "{}")'.format(original.type,
+                                                                   name,
+                                                                   path,
+                                                                   original.md5,
+                                                                   original.file_extension)
+
+            self._database.execute(query)
+            source_id = self._database.execute('SELECT LAST_INSERT_ROWID()').fetchone()['LAST_INSERT_ROWID()']
+
+            # Add master into database
+            # for part in masters:
+            name = os.path.basename(master.new_name)
+            path = os.path.dirname(master.new_name)
+            master_notes = "\n".join(master.notes)
+            query = 'INSERT INTO files '
+            query += '(type, file_name, file_location, md5, file_suffix, file_extension, source, file_notes) '
+            query += 'VALUES("{}", "{}", "{}", "{}", "{}", "{}", "{}", "{}")'.format(master.type,
                                                                                name,
                                                                                path,
-                                                                               access.md5,
-                                                                               access.file_suffix.value,
-                                                                               access.file_extension,
-                                                                               source_id)
+                                                                               master.md5,
+                                                                               master.file_suffix.value,
+                                                                               master.file_extension,
+                                                                               source_id,
+                                                                               master_notes)
             self._database.execute(query)
+            self._database.execute('INSERT INTO file_pairs('
+                                   'record_id, source_id) '
+                                   'VALUES(?,?)', (record_id, source_id))
+
+            # for access_file in access:
+            #     if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
+            #         print("File: {}".format(master))
+            # for part in access:
+            if access:
+                access_notes = "\n".join(access.notes)
+                name = os.path.basename(access.new_name)
+                path = os.path.dirname(access.new_name)
+                query = 'INSERT INTO files '
+                query += '(type, file_name, file_location, md5, file_suffix, file_extension, source, file_notes) '
+                query += 'VALUES("{}", "{}", "{}", "{}", "{}", "{}", "{}", "{}")'.format(access.type,
+                                                                                   name,
+                                                                                   path,
+                                                                                   access.md5,
+                                                                                   access.file_suffix.value,
+                                                                                   access.file_extension,
+                                                                                   source_id,
+                                                                                   access_notes)
+                self._database.execute(query)
         self._database.commit()
 
         pass
@@ -875,8 +891,8 @@ class ReportFactory(metaclass=Singleton):
         #                                  'JOIN files on files.file_id = file_pairs.source_id '
         #                                  'WHERE jobs.job_id IS (?)', (jobNumber,))
         #
-        results = self._database.execute(' SELECT job_id, project_id_prefix, project_id_number, '
-                                         'object_id_prefix, object_id_number, '
+        results = self._database.execute('SELECT job_id, project_id_prefix, project_id_number, '
+                                         'files.file_notes AS "notes", object_id_prefix, object_id_number, '
                                          'source_files.file_name AS "original_name", '
                                          'source_files.md5 AS "original_md5", files.file_name AS "new_name", '
                                          'files.md5 AS "new_md5", '
