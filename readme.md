@@ -1,4 +1,4 @@
-# CAPS Renaming Script
+# CAPS Image Processing
 
 ## Description:
 This script is used to process image files from a partner's drive into new collections that conform to the CAPS 
