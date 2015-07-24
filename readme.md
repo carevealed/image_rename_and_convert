@@ -34,7 +34,7 @@ Option 1: Install using Conda (recommended)
 -------------------------------------------
 
 If you are setting up Conda/Anaconda for the first time, please look at the readme document 
-[here](https://github.com/cavpp/conda_recipes/tree/master) first 
+[here](https://github.com/cavpp/conda_recipes/tree/master#setting-up-conda) first 
 
 1. In the launcher program, open a Python 3.4 environment or higher.
 2. Click on the install button for this script
