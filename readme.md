@@ -13,7 +13,7 @@ you have the correct version of python. **If you are running this through the An
 about this directly.** 
 
 If you are uncertain if you have Python 3.4 or higher installed, 
-(on OSX or Linux) open up terminal and type:
+(on OSX or Linux) open up terminal and type
 
     ```shell
     which python3
@@ -22,7 +22,7 @@ If you are uncertain if you have Python 3.4 or higher installed,
 If Python 3 is install, you'll receive a path leading to the Python3 directory. If you receive nothing back, 
 you'll have to install Python 3 by typing in the following command in the terminal.
     
-On OSX:
+On OSX
 
     ```shell    
     brew install python3
