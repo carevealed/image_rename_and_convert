@@ -65,13 +65,14 @@ Option 3: From source using Setuptools
 --------------------------------------
 
 1. Open a terminal window and type:
-```shell
-cd Downloads
-git clone https://github.com/cavpp/rename_files.git
-cd PBCore
-sudo python3 setup.py install 
-```
-        
+
+    ```shell
+    cd Downloads
+    git clone https://github.com/cavpp/rename_files.git
+    cd PBCore
+    sudo python3 setup.py install 
+    ```
+            
 2. Enter your computer password and the script will install along with all the dependencies.
 
 
