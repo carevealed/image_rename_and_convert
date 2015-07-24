@@ -15,15 +15,17 @@ about this directly.**
 If you are uncertain if you have Python 3.4 or higher installed, 
 (on OSX or Linux) open up terminal and type:
 
+        ```shell
         which python3
-        
+        ```
+
 If Python 3 is install, you'll receive a path leading to the Python3 directory. If you receive nothing back, 
 you'll have to install Python 3 by typing in the following command in the terminal.
     
 On OSX:
-    
+        ```shell    
         brew install python3
-
+        ```
 If this script is installed in through the Anaconda Launcher, make sure you install it into a environment that is at 
 least Python 3.4 or higher.
 
@@ -55,8 +57,9 @@ https://github.com/cavpp/rename_files/releases. Right click on the link to lates
 * The actual name of the file will change with each version.
 * If you have a problem that pip isn't installed, you can install it with the following command.
  
-        sudo easy_install pip
-
+    ```shell 
+    sudo easy_install pip
+    ```
 If easy_install doesn't work, try following the instructions at this [link](https://pip.pypa.io/en/latest/installing.html#install-pip).
 
 
