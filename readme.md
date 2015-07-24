@@ -17,10 +17,10 @@ If you are uncertain if you have Python 3.4 or higher installed,
 
         which python3
         
-    If Python 3 is install, you'll receive a path leading to the Python3 directory. If you receive nothing back, 
-    you'll have to install Python 3 by typing in the following command in the terminal.
+If Python 3 is install, you'll receive a path leading to the Python3 directory. If you receive nothing back, 
+you'll have to install Python 3 by typing in the following command in the terminal.
     
-    On OSX:
+On OSX:
     
         brew install python3
 
