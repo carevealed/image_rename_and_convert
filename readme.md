@@ -15,17 +15,19 @@ about this directly.**
 If you are uncertain if you have Python 3.4 or higher installed, 
 (on OSX or Linux) open up terminal and type:
 
-        ```shell
-        which python3
-        ```
+    ```shell
+    which python3
+    ```
 
 If Python 3 is install, you'll receive a path leading to the Python3 directory. If you receive nothing back, 
 you'll have to install Python 3 by typing in the following command in the terminal.
     
 On OSX:
-        ```shell    
-        brew install python3
-        ```
+
+    ```shell    
+    brew install python3
+    ```
+    
 If this script is installed in through the Anaconda Launcher, make sure you install it into a environment that is at 
 least Python 3.4 or higher.
 
