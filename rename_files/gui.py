@@ -365,7 +365,7 @@ class MainDialog(QDialog, Ui_Form):
         status = ""
         worker = Worker2()
 
-
+        job = None
         # self.connect(worker.updateStatus, status)
         while q.unfinished_tasks:
             if not worker.isRunning():
@@ -387,7 +387,10 @@ class MainDialog(QDialog, Ui_Form):
             # print(self.status)
             if not worker.isRunning():
                 i += 1
-
+                xml_file_name = job.new_name + ".xml"
+                xml_file_path = os.path.join(worker.new_path, xml_file_name)
+                with open(xml_file_path, "w") as f:
+                    f.write(worker.xml.__str__())
                 q.task_done()
                 continue
 

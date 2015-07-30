@@ -5,6 +5,9 @@ from time import sleep, ctime, time
 import shutil
 from PIL import Image, ImageFilter
 
+from rename_files import file_metadata_builder
+from rename_files.nonAV import NonAVModel
+# from rename_files.nonAV import file_metadata_builder
 
 __author__ = 'California Audio Visual Preservation Project'
 
@@ -137,39 +140,34 @@ class Worker2(QThread):
         self._path = path
         self.notes = []
 
-
     def run(self):
         # QThread.sleep(100)
         # sleep(2)
+        checksum = None
+        new_name = None
+        extension = None
+        date = None
+        self.new_path = os.path.join(self._path, self._packet.object_id)
+        instances = NonAVModel.Instantiations()
+        instances.relationship = "page " + str(self._packet.part_number)
+
+
         if not self._packet:
             raise WorkerException("Need a job packet")
-
-
 
         # Add a copy of the original to the report
         self.updateStatus.emit(self.status_packet(title="Calculating MD5",
                                                   s_file=os.path.basename(self._packet.old_name),
                                                   d_file=None,
                                                   path=None))
-        # checksum = self.get_md5(self._packet.old_name)
-        # extension = os.path.splitext(self._packet.old_name)[1]
-        # new_packet = self.report_packet(old_name=self._packet.old_name,
-        #                                     new_name=self._packet.new_name,
-        #                                     object_id=self._packet.object_id,
-        #                                     type="Original",
-        #                                     md5=checksum,
-        #                                     date=None, # TODO change to date Created
-        #                                     file_suffix=self._packet.file_suffix,
-        #                                     file_extension=extension,
-        #                                     notes=None)
-        # self.job_completed.emit(new_packet)
+
 
         # If needed convert file to new format
-        new_path = os.path.join(self._path, self._packet.object_id)
-        if not os.path.exists(new_path):
+
+        if not os.path.exists(self.new_path):
             # Create new directory if doesn't exist
-            os.makedirs(new_path)
-        new_name = os.path.join(new_path, self._packet.new_name)
+            os.makedirs(self.new_path)
+        new_name = os.path.join(self.new_path, self._packet.new_name)
         extension = os.path.splitext(self._packet.new_name)[1]
 
         if self._packet.convert:
@@ -178,7 +176,7 @@ class Worker2(QThread):
             self.updateStatus.emit(self.status_packet(title="Converting new files",
                                                       s_file=self._packet.old_name,
                                                       d_file=self._packet.new_name,
-                                                      path=new_path))
+                                                      path=self.new_path))
             if not self.convert_format(self._packet.old_name, new_name):
                 raise WorkerException(self._packet.old_name, " failed to convert.")
 
@@ -187,7 +185,7 @@ class Worker2(QThread):
                                                       d_file=None,
                                                       path=None))
             checksum = self.get_md5(new_name)
-            self._save_as_file(checksum, os.path.join(new_path, self._packet.new_name + ".md5"))
+            self._save_as_file(checksum, os.path.join(self.new_path, self._packet.new_name + ".md5"))
             date = ctime()
 
             new_packet = self.report_packet(old_name=self._packet.old_name,
@@ -204,6 +202,13 @@ class Worker2(QThread):
                                             file_suffix=self._packet.file_suffix,
                                             file_extension=extension,
                                             notes=self.notes)
+            converted_file_metadata = file_metadata_builder.file_metadata_builder(os.path.join(self.new_path,self._packet.new_name),
+                                                  generation=self._packet.file_generation,
+                                                  derived_from=os.path.basename(self._packet.old_name),
+                                                  checksum=checksum,
+                                                  checksum_type="md5",
+                                                  processing_notes="; ".join(self.notes))
+            instances.add_instantiation(converted_file_metadata.xml)
             self.job_completed.emit(new_packet)
 
         # If needed copy the file to the new destination
@@ -211,29 +216,12 @@ class Worker2(QThread):
             self.updateStatus.emit(self.status_packet(title="Copying Files",
                                                       s_file=self._packet.old_name,
                                                       d_file=self._packet.new_name,
-                                                      path=new_path))
-            # self.updateStatus.emit('<h3 align="center">Copying files</h3><br>'
-            #                        '<table cellpadding="5">'
-            #                        '<tr>'
-            #                        '<th align="left">From:</th>'
-            #                        '<td>{}</td>'
-            #                        '</tr>'
-            #                        '<tr>'
-            #                        '<th align="left">As:</th>'
-            #                        '<td>{}</td>'
-            #                        '</tr>'
-            #                        '<tr>'
-            #                        '<th align="left">To:</th>'
-            #                        '<td>{}</td>'
-            #                        '</tr>'
-            #                        # '<p align="left">From:\t{}</p>\n'
-            #                        # '<p align="left">As:\t{}</p>\n'
-            #                        # '<p align="left">To:\t{}</p>'
-            #                        .format(self._packet.old_name, self._packet.new_name, self._path))
+                                                      path=self.new_path))
+
             if not self.copy_files(self._packet.old_name, new_name):
                 raise WorkerException(self._packet.old_name, " failed to copy.")
             checksum = self.get_md5(new_name)
-            Worker2._save_as_file(checksum, os.path.join(new_path, self._packet.new_name + ".md5"))
+            Worker2._save_as_file(checksum, os.path.join(self.new_path, self._packet.new_name + ".md5"))
             date = ctime()
             extension = os.path.splitext(new_name)[1]
 
@@ -253,8 +241,22 @@ class Worker2(QThread):
                                             notes=self.notes)
             self.job_completed.emit(new_packet)
 
+        # build an xml
 
 
+            tiff_file_metadata = file_metadata_builder.file_metadata_builder(os.path.join(self.new_path,self._packet.new_name),
+                                                              generation=self._packet.file_generation,
+                                                              derived_from="Physical",
+                                                              checksum=checksum,
+                                                              checksum_type="md5",
+                                                              processing_notes="; ".join(self.notes))
+            instances.add_instantiation(tiff_file_metadata.xml)
+        self.xml = instances
+        new_file = self._packet.new_name + ".xml"
+
+        # print(xml)
+        # with open(os.path.join(new_path, new_file), 'w') as f:
+        #     f.write(xml.__str__())
 
     def convert_format(self, source, destination):
         print("Converting")
@@ -271,10 +273,7 @@ class Worker2(QThread):
         else:
             img = img.convert('RGB')
             self.notes.append("{}: File converted to RGB colorspace.".format(ctime()))
-
-
-            # raise AmbiguousMode(file['source'])
-        self.notes.append(("{}: Saved converted image to jpeg.".format(ctime())))
+        self.notes.append(("{}: Saved converted image as jpeg.".format(ctime())))
         img.save(destination,
                  'jpeg',
                  icc_profile=img.info.get("icc_profile"),
@@ -282,6 +281,7 @@ class Worker2(QThread):
                  subsampling=1,
                  progressive=True)
         img.close()
+
         return True
 
     @staticmethod
@@ -307,130 +307,3 @@ class Worker2(QThread):
             for chunk in iter(lambda: f.read(BUFFER), b''):
                 md5.update(chunk)
         return md5.hexdigest()
-
-    # def build_report_packet(self):
-
-
-# class Worker2(object):
-#     updateStatus = pyqtSignal(str)
-#     reporter = pyqtSignal(NameRecord)
-#     reset_progress = pyqtSignal(int)
-#     update_progress = pyqtSignal(int)
-#     request_report = pyqtSignal()
-#     error_reporter = pyqtSignal(str)
-#
-#     _halt = False
-#
-#     def __init__(self, job):
-#         super(Worker2, self).__init__()
-#         self.record = None
-#         self.job = job
-#
-#
-#         # def _do_the_renaming(self, record, convert_format=None, print_status=False):
-#         if not isinstance(self.job, namedtuple):
-#             raise TypeError
-#         temp_files = []
-#         for part in self.job.parts:
-#             if Worker2._halt:
-#                 break
-#
-#             if part.make_copy:
-#                 if not os.path.exists(os.path.dirname(part.new_file_name)):
-#                     os.makedirs(os.path.dirname(part.new_file_name))
-#                 # record.set_Working()
-#                 shutil.copy2(part.old_file_name, part.new_file_name)
-#
-#             if part.convert:
-#                 if not os.path.exists(os.path.dirname(part.new_file_name)):
-#                     os.makedirs(os.path.dirname(part.new_file_name))
-#                 self.convert_format(part.old_file_name, part.new_file_name)
-#
-#
-#                 # # if file.file_status == FileStatus.NEEDS_TO_BE_COPIED:
-#                 # #     if MODE == running_mode.DEBUG or MODE == running_mode.BUILD or print_status:
-#                 #         print("Copying {0} to {1}.".format(file.source, file.filename), end="")
-#                 #     destination = os.path.join(self.new_path, file.output_filename)
-#                 #     shutil.copy2(file.source, destination)
-#                 #     if filecmp.cmp(file.source, destination):
-#                 #         if MODE == running_mode.DEBUG or MODE == running_mode.BUILD or print_status:
-#                 #             print("  ... Success!")
-#                 #
-#                 #         new_file.file_status = FileStatus.NEEDS_A_RECORD
-#                 #         new_file.file_extension = os.path.splitext(destination)[1]
-#                 #         new_file.file_path = os.path.split(destination)[0]
-#                 #         new_file.file_suffix = file.file_suffix
-#                 #         new_file.file_type = file.file_type
-#                 #         new_file.filename = os.path.basename(destination)
-#                 #         new_file.md5 = self._calculate_md5(destination)
-#
-#                     #     record.set_NeedsUpdating()
-#                     # else:
-#                     #     sys.stderr.write("Failed!\n")
-#                     #     raise IOError("File {0} does not match {1]".format(file.source, file.filename))
-#     #             elif file.file_status == FileStatus.NEEDS_TO_BE_CREATED:
-#     #                 if MODE == running_mode.DEBUG or MODE == running_mode.BUILD or print_status:
-#     #                     print("Converting {0} to {1}.".format(file.source, file.filename), end="")
-#     #                 new_file = self.convert_format(file)
-#     #
-#     #                 if os.path.exists(os.path.join(new_file.file_path, new_file.filename)):
-#     #                     if MODE == running_mode.DEBUG or MODE == running_mode.BUILD or print_status:
-#     #                         print("  ... Success!")
-#     #                 else:
-#     #                     sys.stderr.write("Failed to convert!\n")
-#     #                     raise IOError("File {} was not found after being converted from {}".format(new_file.filename, file.source))
-#     #             # FIXME!!!
-#     #             file.md5 = self._calculate_md5(file.source)
-#     #             file.file_suffix = None
-#     #             file.file_type = FileTypes.ORIGINAL
-#     #             temp_files.append(file)
-#     #             temp_files.append(new_file)
-#         #             destination = None
-#         #         else:
-#         #             pass
-# 		#
-#         # record.parts = temp_files
-# 		#
-#         # record.set_NeedsUpdating()
-#         # return record
-#         pass
-#
-#
-    # def convert_format(self, source, destination):
-    #         # new_file = copy.copy(file)
-	#
-    #         # if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
-    #         #     print("converting {}".format(file.source))
-    #         img = Image.open(source)
-    #         if img.mode == '1':
-    #             # blur the image to make it compress better
-    #             img = img.convert('RGB')
-    #             img = img.filter(ImageFilter.GaussianBlur(3))
-    #         img = img.convert('RGB')
-	#
-	#
-    #             # raise AmbiguousMode(file['source'])
-    #         img.save(destination,
-    #                  'jpeg',
-    #                  icc_profile=img.info.get("icc_profile"),
-    #                  quality=90,
-    #                  subsampling=1,
-    #                  progressive=True)
-    #         img.close()
-            # except IOError:
-            #     img = Image.open(file['source'])
-            #     img.save(os.path.join(self.new_path, file['output_filename']), 'jpeg', icc_profile=img.info.get("icc_profile"), quality=90, subsampling=1, optimize=True)
-            #     img.close()
-            # if MODE == running_mode.DEBUG or MODE == running_mode.BUILD:
-            #     print("Calculating new checksum")
-			#
-            # new_file.filename = file.output_filename
-            # new_file.md5 = self._calculate_md5(os.path.join(self.new_path, file.output_filename))
-            # new_file.file_path = self.new_path
-            # new_file.file_suffix = "access"
-            # new_file.file_extension = os.path.splitext(file.output_filename)[1]
-            # new_file.file_status = FileStatus.DERIVED
-            # new_file.file_type = FileTypes.ACCESS
-			#
-			#
-            # return new_file
