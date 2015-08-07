@@ -7,7 +7,7 @@
 # from Model import DublinCore
 
 from xml.etree.ElementTree import Element as etElement
-from xml.etree.ElementTree import tostring
+from xml.etree.ElementTree import tostring, fromstring
 from xml.dom.minidom import parseString
 from collections import OrderedDict
 
@@ -157,9 +157,8 @@ class Element(object):
         pass
 
     def add_child(self, child):
-        if not isinstance(child, Element):
+        if not isinstance(child, Element) and not isinstance(child, etElement):
             raise TypeError(str(type(Element)))
-        assert(isinstance(child, Element))
         self._children.append(child)
 
     @property
@@ -171,5 +170,8 @@ class Element(object):
                 # print(key)
                 element.set(key, self._attributes[key])
         for child in self._children:
-            element.append(child.xml)
+            if isinstance(child, Element):
+                element.append(child.xml)
+            if isinstance(child, etElement):
+                element.append(child)
         return element

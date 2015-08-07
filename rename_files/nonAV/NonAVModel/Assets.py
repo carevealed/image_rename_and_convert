@@ -214,11 +214,12 @@ class Assets(CAPS_node):
             if not self.dimensionsWidthUnit:
                 missing_attributes.append("dimensionsWidth unit")
 
-        if not self.color:
-            missing_fields.append("color")
+        #FIXME
+        # if not self.color:
+        #     missing_fields.append("color")
 
-        if not self.hasParts:
-            missing_fields.append("hasParts")
+        # if not self.hasParts:
+        #     missing_fields.append("hasParts")
 
         if len(missing_fields) == 0 and len(missing_attributes) == 0:
             valid = True

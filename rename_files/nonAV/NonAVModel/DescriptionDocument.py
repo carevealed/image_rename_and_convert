@@ -19,7 +19,7 @@ class DescriptionDocument(CAPS_node):
     def _make_xml(self):
         root = Element("DescriptionDocument")
         root.add_child(self.dublinCore)
-        root.add_child(self.assets)
+        root.add_child(self.assets.xml)
         return root
 
     def check_required_data(self):

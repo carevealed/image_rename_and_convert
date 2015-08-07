@@ -2,17 +2,18 @@
 # -*- coding: UTF-8 -*-
 # import NonAVModel.AssetPart
 from .Element import Element
+from xml.etree.ElementTree import Element as etElement
 # import NonAVModel.Instantiation
 from .CAPS_node import CAPS_node
 
 class Instantiations(CAPS_node):
-    def __init__(self):
+    def __init__(self, relationship=None):
         """
         _relationship (str):
         _instantiation (list): list of Instantiation Objects
         """
         super(Instantiations, self).__init__()
-        self._relationship = None
+        self._relationship = relationship
         self._instantiation = []
 
     def add_instantiation(self, new_instantiation):
@@ -20,9 +21,8 @@ class Instantiations(CAPS_node):
         """
         :param Instantiation new_instantiation:
         """
-        assert(isinstance(new_instantiation, Element))
+        # assert(isinstance(new_instantiation, Element))
         self._instantiation.append(new_instantiation)
-        pass
 
     def _make_xml(self):
         root = Element("Instantiations", attributes={"relationship": self.relationship})

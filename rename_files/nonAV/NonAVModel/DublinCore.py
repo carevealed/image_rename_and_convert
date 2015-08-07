@@ -283,8 +283,6 @@ class DublinCore(CAPS_node):
             missing_fields.append("type")
         if not self.source:
             missing_fields.append("source")
-        if not self.coverage:
-            missing_fields.append("coverage")
         if not self.rights:
             missing_fields.append("rights")
 
