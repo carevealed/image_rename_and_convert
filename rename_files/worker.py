@@ -203,11 +203,11 @@ class Worker2(QThread):
                                             file_extension=extension,
                                             notes=self.notes)
             converted_file_metadata = file_metadata_builder.file_metadata_builder(os.path.join(self.new_path,self._packet.new_name),
-                                                  generation=self._packet.file_generation,
-                                                  derived_from=os.path.basename(self._packet.old_name),
-                                                  checksum=checksum,
-                                                  checksum_type="md5",
-                                                  processing_notes="; ".join(self.notes))
+                                                                                  generation=self._packet.file_generation,
+                                                                                  derived_from=os.path.basename(self._packet.old_name),
+                                                                                  checksum=checksum,
+                                                                                  checksum_type="md5",
+                                                                                  processing_notes="; ".join(self.notes))
             instances.add_instantiation(converted_file_metadata.xml)
             self.job_completed.emit(new_packet)
 
@@ -244,12 +244,12 @@ class Worker2(QThread):
         # build an xml
 
 
-            tiff_file_metadata = file_metadata_builder.file_metadata_builder(os.path.join(self.new_path,self._packet.new_name),
-                                                              generation=self._packet.file_generation,
-                                                              derived_from="Physical",
-                                                              checksum=checksum,
-                                                              checksum_type="md5",
-                                                              processing_notes="; ".join(self.notes))
+            tiff_file_metadata = file_metadata_builder.file_metadata_builder(os.path.join(self.new_path, self._packet.new_name),
+                                                                             generation=self._packet.file_generation,
+                                                                             derived_from="Physical",
+                                                                             checksum=checksum,
+                                                                             checksum_type="md5",
+                                                                             processing_notes="; ".join(self.notes))
             instances.add_instantiation(tiff_file_metadata.xml)
         self.xml = instances
         new_file = self._packet.new_name + ".xml"
@@ -266,10 +266,10 @@ class Worker2(QThread):
             self.notes.append("{}: Determined that the file is 1 bit so extra processing is required.".format(ctime()))
 
             # blur the image to make it compress better
-            self.notes.append("{}: File converted to RGB colorspace.".format(ctime()))
             img = img.convert('RGB')
-            self.notes.append("{}: Added gaussian blur of 3 pixels to help.".format(ctime()))
+            self.notes.append("{}: File converted to RGB colorspace.".format(ctime()))
             img = img.filter(ImageFilter.GaussianBlur(3))
+            self.notes.append("{}: Applied gaussian blur of 3 pixel radius to help jpeg compression.".format(ctime()))
         else:
             img = img.convert('RGB')
             self.notes.append("{}: File converted to RGB colorspace.".format(ctime()))

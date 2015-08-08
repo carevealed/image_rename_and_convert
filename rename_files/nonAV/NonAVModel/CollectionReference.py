@@ -20,9 +20,9 @@ class CollectionReference(CAPS_node):
         root = Element(tag="CollectionReference")
         root.add_attribute("collectionSource", self._collectionSource)
         root.add_attribute("projectSource", self._projectSource)
-        root.add_attribute("xmlns", "http://calpreservation.org/projects/audiovisual-preservation/dcscheme.html")
+        root.add_attribute("xmlns", "http://calpreservation.org/projects/audiovisual-preservation/cavppdcscheme.html")
         root.add_attribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance")
-        root.add_attribute("xsi:schemaLocation", "http://calpreservation.org/projects/audiovisual-preservation/dcscheme.html http://calpreservation.org/projects/audiovisual-preservation/CAVPPDC.xsd")
+        root.add_attribute("xsi:schemaLocation", "http://calpreservation.org/projects/audiovisual-preservation/cavppdcscheme.html http://calpreservation.org/projects/audiovisual-preservation/CAVPPDC.xsd")
 
         root.add_child(self._descriptionDocument)
         return root
