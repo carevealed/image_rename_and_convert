@@ -200,11 +200,11 @@ def compile_instances(folder, data):
             if xml_instance_tree[0].attrib['generation'] == 'Access':
                 access = xml_instance_tree[0]
                 print("Access")
-            elif xml_instance_tree[0].attrib['generation'] == 'Master':
-                print("Master")
+            elif xml_instance_tree[0].attrib['generation'] == 'Preservation':
+                print("Preservation")
                 preservation = xml_instance_tree[0]
             else:
-                raise Exception("Something went wrong with your data")
+                raise Exception("Something went wrong with your data. Got '{}' for the generation of your metadta".format(xml_instance_tree[0].attrib['generation']))
         page_xml.add_instantiation(preservation)
         if access:
             page_xml.add_instantiation(access)

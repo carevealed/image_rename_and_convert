@@ -185,7 +185,7 @@ class Worker2(QThread):
                                                       d_file=None,
                                                       path=None))
             checksum = self.get_md5(new_name)
-            self._save_as_file(checksum, os.path.join(self.new_path, self._packet.new_name + ".md5"))
+            self._save_as_file(checksum, os.path.join(self.new_path, self._packet.new_name + ".md5"), source=self._packet.new_name)
             date = ctime()
 
             new_packet = self.report_packet(old_name=self._packet.old_name,
@@ -221,7 +221,7 @@ class Worker2(QThread):
             if not self.copy_files(self._packet.old_name, new_name):
                 raise WorkerException(self._packet.old_name, " failed to copy.")
             checksum = self.get_md5(new_name)
-            Worker2._save_as_file(checksum, os.path.join(self.new_path, self._packet.new_name + ".md5"))
+            Worker2._save_as_file(checksum, os.path.join(self.new_path, self._packet.new_name + ".md5"), source=self._packet.new_name)
             date = ctime()
             extension = os.path.splitext(new_name)[1]
 
@@ -285,10 +285,13 @@ class Worker2(QThread):
         return True
 
     @staticmethod
-    def _save_as_file(checksum, file_name):
+    def _save_as_file(checksum, file_name, source=None):
         # print("Saving checksum, {}, into {}".format(checksum, file_name))
         with open(file_name, "w") as f:
             f.write(checksum)
+            if source:
+                footer = "  *" + source
+                f.write(footer)
             pass
     def copy_files(self, source, destination):
         if not os.path.exists(os.path.dirname(destination)):
