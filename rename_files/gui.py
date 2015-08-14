@@ -539,7 +539,8 @@ class MainDialog(QDialog, Ui_Form):
             elif res == QMessageBox.No:
                 # Ask user for another name
                 save_box = QFileDialog.getSaveFileName(self, 'Save file', self._destination, "CSV (*.csv);;All Files (*)")
-
+                if save_box:
+                    generate_report(self.reporter, os.path.join(self._destination, save_box))
     def _run_reports(self):
         checked = self.checkBox_IncludeReport.isChecked()
         if checked:
