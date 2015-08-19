@@ -195,8 +195,39 @@ def compile_instances(folder, data):
         for xml_instance in page_instances:
             xml_data = open_and_clean(xml_instance)
             xml_instance_tree = ElementTree.fromstring(xml_data)
-            for tech_note in xml_instance_tree.iter('additionalTechnicalNotes'):
-                tech_note.text = tech_note.text + "; " + data.Additional_Technical_Notes
+            # FIXME this is really ugly code
+            # x = xml_instance_tree.iter('additionalTechnicalNotes')
+            tech_notes = xml_instance_tree.findall("additionalTechnicalNotes")
+            # print(len(n))
+            if tech_notes:
+                for tech_note in xml_instance_tree.iter('additionalTechnicalNotes'):
+                    if not tech_note:
+                        print("No")
+                        print(tech_note.text)
+                    else:
+                        print("yes")
+                        print(tech_note.text)
+
+                    # if xml_instance_tree[0].attrib['generation'] == 'Preservation':
+                    tech_note.text = data.Additional_Technical_Notes
+
+                    # else:
+                    if xml_instance_tree[0].attrib['generation'] == 'Preservation':
+                        tech_note.text = tech_note.text + "; " + data.Additional_Technical_Notes
+            else:
+                print("No notes found in file XML metadata")
+                if xml_instance_tree[0].attrib['generation'] == 'Preservation':
+                    print("Adding additionalTechnicalNotes to Preservation file XML.")
+                    for note in xml_instance_tree.iter('Technical'):
+                        # print(note)
+                        ElementTree.SubElement(note, 'additionalTechnicalNotes')
+                        for tech_note in xml_instance_tree.iter('additionalTechnicalNotes'):
+                            if xml_instance_tree[0].attrib['generation'] == 'Preservation':
+                                # print(data.Additional_Technical_Notes)
+                                tech_note.text = data.Additional_Technical_Notes
+
+
+
             if xml_instance_tree[0].attrib['generation'] == 'Access':
                 access = xml_instance_tree[0]
                 print("Access")
@@ -204,8 +235,10 @@ def compile_instances(folder, data):
                 print("Preservation")
                 preservation = xml_instance_tree[0]
             else:
-                raise Exception("Something went wrong with your data. Got '{}' for the generation of your metadta".format(xml_instance_tree[0].attrib['generation']))
+                raise Exception("Something went wrong with your data. Got '{}' for the generation of your metadata".format(xml_instance_tree[0].attrib['generation']))
         page_xml.add_instantiation(preservation)
+
+
         if access:
             page_xml.add_instantiation(access)
         assetPart.add_instantiations(page_xml.xml)
@@ -365,7 +398,7 @@ def main():
                 new_xml = build_record(data)
                 with open(new_file, 'w') as f:
                     f.write(new_xml.__str__())
-                print("Saved compiled metadata as {}".format(new_file))
+                print("Saved compiled metadata as {}.\n\n".format(new_file))
             except FileNotFoundError as e:
                 sys.stderr.write("Couldn't find file data for " + data.Object_Identifier + ".\n")
             # sleep(.01)
