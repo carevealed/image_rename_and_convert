@@ -212,7 +212,9 @@ def compile_instances(folder, data):
                     tech_note.text = data.Additional_Technical_Notes
 
                     # else:
-                    if xml_instance_tree[0].attrib['generation'] == 'Preservation':
+                    if xml_instance_tree[0].attrib['generation'] == 'Preservation' \
+                            or xml_instance_tree[0].attrib['generation'] == 'Preservation Master' \
+                            or xml_instance_tree[0].attrib['generation'] == 'Master':
                         tech_note.text = tech_note.text + "; " + data.Additional_Technical_Notes
             else:
                 print("No notes found in file XML metadata")
@@ -226,12 +228,14 @@ def compile_instances(folder, data):
                                 # print(data.Additional_Technical_Notes)
                                 tech_note.text = data.Additional_Technical_Notes
 
-
-
-            if xml_instance_tree[0].attrib['generation'] == 'Access':
+            if xml_instance_tree[0].attrib['generation'] == 'Access Copy' \
+                    or xml_instance_tree[0].attrib['generation'] == 'Access':
                 access = xml_instance_tree[0]
                 print("Access")
             elif xml_instance_tree[0].attrib['generation'] == 'Preservation':
+                print("Preservation")
+                preservation = xml_instance_tree[0]
+            elif xml_instance_tree[0].attrib['generation'] == 'Preservation Master':
                 print("Preservation")
                 preservation = xml_instance_tree[0]
             elif xml_instance_tree[0].attrib['generation'] == 'Master':

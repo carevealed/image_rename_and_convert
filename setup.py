@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='rename_and_convert_images',
-    version='0.5.6',
+    version='0.5.7',
     # packages=['rename_files', 'rename_files.gui_datafiles', 'rename_files.data'],
     # package_data={'data': ['data.db']},
     packages=find_packages(),

@@ -772,9 +772,9 @@ class ReportFactory(metaclass=Singleton):
 
                 if part.type == "Original":
                     original = part
-                elif part.type == "Access":
+                elif part.type == "Access Copy":
                     access = part
-                elif part.type == "Master":
+                elif part.type == "Preservation Master":
                     master = part
                 else:
                     raise ValueError("Not a valid record type")

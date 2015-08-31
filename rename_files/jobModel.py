@@ -195,6 +195,7 @@ class jobTreeNode(object):
     oid_start_num = 0
     oid_marc = ""
     SINGLE_PAGE = "Single Page"
+
     def __init__(self,
                  pid_prefix,
                  pid_start_num,
@@ -685,9 +686,9 @@ class NewFileNode(jobTreeNode):
 
         if self._data.included:
             if self._data.file_type == FileTypeCodes.ACCESS:
-                generation = "Access"
+                generation = "Access Copy"
             elif self._data.file_type == FileTypeCodes.MASTER:
-                generation = "Master"
+                generation = "Preservation Master"
             else:
                 generation = None
             packet = self.job_packet(old_name=self.data(DataRows.ORIGINAL_NAME.value),
