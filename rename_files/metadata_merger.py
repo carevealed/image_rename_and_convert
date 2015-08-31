@@ -6,7 +6,7 @@ from xml.etree.ElementTree import XMLParser
 __author__ = 'California Audio Visual Preservation Project'
 from csv import reader
 from collections import namedtuple
-from rename_files.nonAV import NonAVModel
+from nonAV import NonAVModel
 from xml.etree import ElementTree
 from xml.dom import minidom
 source_path = ""
