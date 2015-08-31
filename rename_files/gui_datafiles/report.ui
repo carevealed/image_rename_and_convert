@@ -30,11 +30,6 @@
      </property>
      <column>
       <property name="text">
-       <string>Project ID</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
        <string>Object ID</string>
       </property>
      </column>

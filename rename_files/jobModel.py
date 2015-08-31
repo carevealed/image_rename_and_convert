@@ -9,7 +9,7 @@ __author__ = 'California Audio Visual Preservation Project'
 
 class DataRows(Enum):
     QUEUE_NUMBER = 0
-    PROJECT_ID = 1
+    OBJECT_ID = 1
     SIMPLE_COMPLEX = 2
     PAGE_NUMBER = 3
     PAGE_SIDE = 4
@@ -153,8 +153,11 @@ class jobTreeModel(QAbstractItemModel):
             if section == DataRows.PAGE_SIDE.value:
                 return "Page Side"
 
-            if section == DataRows.PROJECT_ID.value:
-                return "Project ID"
+            # if section == DataRows.PROJECT_ID.value:
+            #     return "Project ID"
+
+            if section == DataRows.OBJECT_ID.value:
+                return "Object ID"
 
             if section == DataRows.DATA_TYPE.value:
                 return "Type"
@@ -247,10 +250,18 @@ class jobTreeNode(object):
         return True
 
     def data(self, column):
-        if column == DataRows.PROJECT_ID.value:
+        # if column == DataRows.PROJECT_ID.value:
+        #     if self._data.included:
+        #         try:
+        #             return self._data.project_id_prefix + "_" + str(self._data.project_id_number).zfill(6)
+        #         except TypeError as e:
+        #             print(column, str(type(self)), str(e))
+        #             exit(1)
+
+        if column == DataRows.OBJECT_ID.value:
             if self._data.included:
                 try:
-                    return self._data.project_id_prefix + "_" + str(self._data.project_id_number).zfill(6)
+                    return self._data.object_id_marc + "_" + str(self._data.object_id_number).zfill(6)
                 except TypeError as e:
                     print(column, str(type(self)), str(e))
                     exit(1)

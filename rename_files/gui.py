@@ -186,11 +186,11 @@ class MainDialog(QDialog, Ui_Form):
         self.lineEdit_OID_startNum.textChanged.connect(self._update_oid_startNum)
         self._update_oid_startNum(self.lineEdit_OID_startNum.text())
 
-        self.lineEdit_PID_prefix.textChanged.connect(self._update_pid_prefix)
-        self._update_pid_prefix(self.lineEdit_PID_prefix.text())
+        # self.lineEdit_PID_prefix.textChanged.connect(self._update_pid_prefix)
+        # self._update_pid_prefix(self.lineEdit_PID_prefix.text())
 
-        self.lineEdit_PID_startNum.textChanged.connect(self._update_pid_startNum)
-        self._update_pid_startNum(self.lineEdit_PID_startNum.text())
+        # self.lineEdit_PID_startNum.textChanged.connect(self._update_pid_startNum)
+        # self._update_pid_startNum(self.lineEdit_PID_startNum.text())
 
         self.pushButton_sourceBrowse.clicked.connect(self.browse_source)
         self.pushButton_destinationBrowse.clicked.connect(self.browse_destination)
@@ -199,7 +199,7 @@ class MainDialog(QDialog, Ui_Form):
 
         self.pushButton_load_filles.clicked.connect(self._load_files_click)
         self.pushButton_load_filles.clicked.connect(self._load_files_click)
-        self.pushButton_update.clicked.connect(self.update_click)
+        # self.pushButton_update.clicked.connect(self.update_click)
         self.pushButton_add_complex.clicked.connect(self._add_complex)
 
         self.pushButton_group.clicked.connect(self._group_selected)
@@ -632,12 +632,12 @@ class MainDialog(QDialog, Ui_Form):
             self.lineEdit_destination.setStyleSheet(text_styles.INVALID)
             valid = False
 
-        # pid prefix
-        if self._pid_prefix == "":
-            self.lineEdit_PID_prefix.setStyleSheet(text_styles.INVALID)
-            valid = False
-        else:
-            self.lineEdit_PID_prefix.setStyleSheet(text_styles.VALID)
+        # # pid prefix
+        # if self._pid_prefix == "":
+        #     self.lineEdit_PID_prefix.setStyleSheet(text_styles.INVALID)
+        #     valid = False
+        # else:
+        #     self.lineEdit_PID_prefix.setStyleSheet(text_styles.VALID)
 
         # OID MARC
         if self._oid_marc == "":
@@ -645,8 +645,8 @@ class MainDialog(QDialog, Ui_Form):
             valid = False
         else:
             self.lineEdit_OID_MARC.setStyleSheet(text_styles.VALID)
-        if not self._pid_startNum:
-            valid = False
+        # if not self._pid_startNum:
+        #     valid = False
         if not self._oid_startNum:
             valid = False
 
@@ -656,13 +656,13 @@ class MainDialog(QDialog, Ui_Form):
             self.lineEdit_validStatus.setStyleSheet(text_styles.VALID)
             self.pushButton_load_filles.setEnabled(True)
             self.buttonRename.setEnabled(True)
-            self.pushButton_update.setEnabled(True)
+            # self.pushButton_update.setEnabled(True)
         else:
             self.lineEdit_validStatus.insert("Not Valid")
             self.lineEdit_validStatus.setStyleSheet(text_styles.INVALID)
             self.pushButton_load_filles.setEnabled(False)
             self.buttonRename.setEnabled(False)
-            self.pushButton_update.setEnabled(False)
+            # self.pushButton_update.setEnabled(False)
         if start_index.isValid() and end_index.isValid():
             self.tree_filesView.dataChanged(start_index, end_index)
 
@@ -965,16 +965,16 @@ class ReportDialog(QDialog, Ui_dlg_report):
         self.tableWidget.setRowCount(len(self.job_record))
         QMessageBox()
         for row, record in enumerate(self.job_record):
-            project_id = record['project_id_prefix'] + "_" + str(record['project_id_number']).zfill(6)
+            # project_id = record['project_id_prefix'] + "_" + str(record['project_id_number']).zfill(6)
             object_id = record['object_id_prefix'] + "_" + str(record['object_id_number']).zfill(6)
 
-            self.tableWidget.setItem(row, 0, QTableWidgetItem(project_id))
-            self.tableWidget.setItem(row, 1, QTableWidgetItem(object_id))
-            self.tableWidget.setItem(row, 2, QTableWidgetItem(record['original_name']))
-            self.tableWidget.setItem(row, 3, QTableWidgetItem(record['new_name']))
-            self.tableWidget.setItem(row, 4, QTableWidgetItem(record['new_md5']))
-            self.tableWidget.setItem(row, 5, QTableWidgetItem(record['ia_url']))
-            self.tableWidget.setItem(row, 6, QTableWidgetItem(record['notes']))
+            # self.tableWidget.setItem(row, 0, QTableWidgetItem(project_id))
+            self.tableWidget.setItem(row, 0, QTableWidgetItem(object_id))
+            self.tableWidget.setItem(row, 1, QTableWidgetItem(record['original_name']))
+            self.tableWidget.setItem(row, 2, QTableWidgetItem(record['new_name']))
+            self.tableWidget.setItem(row, 3, QTableWidgetItem(record['new_md5']))
+            self.tableWidget.setItem(row, 4, QTableWidgetItem(record['ia_url']))
+            self.tableWidget.setItem(row, 5, QTableWidgetItem(record['notes']))
 
 
 def start_gui(database, folder=None):

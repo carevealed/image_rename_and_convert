@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/Users/lpsdesk/PycharmProjects/rename_files/rename_files/gui_datafiles/report.ui'
 #
-# Created: Thu Jul 23 15:41:40 2015
+# Created: Mon Aug 31 11:49:36 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -33,7 +33,7 @@ class Ui_dlg_report(object):
         self.tableWidget = QtGui.QTableWidget(dlg_report)
         self.tableWidget.setMinimumSize(QtCore.QSize(0, 0))
         self.tableWidget.setObjectName(_fromUtf8("tableWidget"))
-        self.tableWidget.setColumnCount(7)
+        self.tableWidget.setColumnCount(6)
         self.tableWidget.setRowCount(0)
         item = QtGui.QTableWidgetItem()
         self.tableWidget.setHorizontalHeaderItem(0, item)
@@ -47,8 +47,6 @@ class Ui_dlg_report(object):
         self.tableWidget.setHorizontalHeaderItem(4, item)
         item = QtGui.QTableWidgetItem()
         self.tableWidget.setHorizontalHeaderItem(5, item)
-        item = QtGui.QTableWidgetItem()
-        self.tableWidget.setHorizontalHeaderItem(6, item)
         self.verticalLayout.addWidget(self.tableWidget)
         self.pushButton = QtGui.QPushButton(dlg_report)
         self.pushButton.setObjectName(_fromUtf8("pushButton"))
@@ -61,18 +59,16 @@ class Ui_dlg_report(object):
     def retranslateUi(self, dlg_report):
         dlg_report.setWindowTitle(_translate("dlg_report", "Report", None))
         item = self.tableWidget.horizontalHeaderItem(0)
-        item.setText(_translate("dlg_report", "Project ID", None))
-        item = self.tableWidget.horizontalHeaderItem(1)
         item.setText(_translate("dlg_report", "Object ID", None))
-        item = self.tableWidget.horizontalHeaderItem(2)
+        item = self.tableWidget.horizontalHeaderItem(1)
         item.setText(_translate("dlg_report", "Old Name", None))
-        item = self.tableWidget.horizontalHeaderItem(3)
+        item = self.tableWidget.horizontalHeaderItem(2)
         item.setText(_translate("dlg_report", "New Name", None))
-        item = self.tableWidget.horizontalHeaderItem(4)
+        item = self.tableWidget.horizontalHeaderItem(3)
         item.setText(_translate("dlg_report", "MD5", None))
-        item = self.tableWidget.horizontalHeaderItem(5)
+        item = self.tableWidget.horizontalHeaderItem(4)
         item.setText(_translate("dlg_report", "Internet Archive URL", None))
-        item = self.tableWidget.horizontalHeaderItem(6)
+        item = self.tableWidget.horizontalHeaderItem(5)
         item.setText(_translate("dlg_report", "Technical Notes", None))
         self.pushButton.setText(_translate("dlg_report", "Close", None))
 
