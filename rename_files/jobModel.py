@@ -624,7 +624,8 @@ class PageSideNode(jobTreeNode):
     def get_jobs(self):
             jobs = []
             for child in self._children:
-                jobs.append(child.get_jobs())
+                if child.get_data().included:
+                    jobs.append(child.get_jobs())
 
             return jobs
 
