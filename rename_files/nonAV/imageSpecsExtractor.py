@@ -38,7 +38,7 @@ def image_specs_extractor(file, technical_notes=None, media_info_path='mediainfo
 
 
 	# standard Python
-	file_format = mimetypes.types_map[os.path.splitext(file)[1]]
+	file_format = mimetypes.types_map[os.path.splitext(file)[1].lower()]
 
 	# using pillow
 	im = Image.open(file)
