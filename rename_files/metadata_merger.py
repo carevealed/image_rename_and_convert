@@ -234,6 +234,9 @@ def compile_instances(folder, data):
             elif xml_instance_tree[0].attrib['generation'] == 'Preservation':
                 print("Preservation")
                 preservation = xml_instance_tree[0]
+            elif xml_instance_tree[0].attrib['generation'] == 'Master':
+                print("Preservation")
+                preservation = xml_instance_tree[0]
             else:
                 raise Exception("Something went wrong with your data. Got '{}' for the generation of your metadata".format(xml_instance_tree[0].attrib['generation']))
         page_xml.add_instantiation(preservation)
