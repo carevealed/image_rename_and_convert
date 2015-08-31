@@ -90,6 +90,19 @@ If you are using any other method, installing the newer version should override 
 
 ## How to use:
 
+### Anaconda Launcher:
+
+Note: Only works with the Conda installation method. 
+
+1. In a terminal window type:
+
+   ```
+   launcher
+   ```
+  
+2. Click Environment and select the correct evironment. 
+3. Click on the launch button next to the script name
+
 ### Command line:
 
 1. In a terminal window type "rename -s " + the path to the files you want to rename.
