@@ -9,7 +9,7 @@ setup(
     include_package_data=True,
     url='https://github.com/cavpp/rename_files',
     license='GPL',
-    install_requires=['setuptools >= 14.3.1', 'Pillow >=2.8.1', 'Wand==0.4.1'],
+    install_requires=['setuptools >= 14.3.1', 'Pillow >=2.8.1', 'Wand >=0.4.1'],
     author='California Audio Visual Preservation Project',
     author_email='hborcher@berkeley.edu',
     zip_safe=False,
