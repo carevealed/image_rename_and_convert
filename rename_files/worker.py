@@ -4,7 +4,7 @@ import threading
 from time import sleep, ctime, time
 import shutil
 from PIL import Image, ImageFilter
-
+from wand.image import Image as WImage
 from rename_files import file_metadata_builder
 from rename_files.nonAV import NonAVModel
 # from rename_files.nonAV import file_metadata_builder
@@ -179,7 +179,6 @@ class Worker2(QThread):
                                                       path=self.new_path))
             if not self.convert_format(self._packet.old_name, new_name):
                 raise WorkerException(self._packet.old_name, " failed to convert.")
-
             self.updateStatus.emit(self.status_packet(title="Calculating MD5",
                                                       s_file=self._packet.new_name,
                                                       d_file=None,
@@ -261,26 +260,32 @@ class Worker2(QThread):
     def convert_format(self, source, destination):
         print("Converting")
         self.notes.append("{}: Read the original file headers.".format(ctime()))
-        img = Image.open(source)
-        if img.mode == '1':
-            self.notes.append("{}: Determined that the file is 1 bit so extra processing is required.".format(ctime()))
+        try:
+            with Image.open(source) as img:
+                if img.mode == '1':
+                    self.notes.append("{}: Determined that the file is 1 bit so extra processing is required.".format(ctime()))
 
-            # blur the image to make it compress better
-            img = img.convert('RGB')
-            self.notes.append("{}: File converted to RGB colorspace.".format(ctime()))
-            img = img.filter(ImageFilter.GaussianBlur(3))
-            self.notes.append("{}: Applied gaussian blur of 3 pixel radius to help jpeg compression.".format(ctime()))
-        else:
-            img = img.convert('RGB')
-            self.notes.append("{}: File converted to RGB colorspace.".format(ctime()))
-        self.notes.append(("{}: Saved converted image as jpeg.".format(ctime())))
-        img.save(destination,
-                 'jpeg',
-                 icc_profile=img.info.get("icc_profile"),
-                 quality=90,
-                 subsampling=1,
-                 progressive=True)
-        img.close()
+                    # blur the image to make it compress better
+                    img = img.convert('RGB')
+                    self.notes.append("{}: File converted to RGB colorspace.".format(ctime()))
+                    img = img.filter(ImageFilter.GaussianBlur(3))
+                    self.notes.append("{}: Applied gaussian blur of 3 pixel radius to help jpeg compression.".format(ctime()))
+                else:
+                    img = img.convert('RGB')
+                    self.notes.append("{}: File converted to RGB colorspace.".format(ctime()))
+                self.notes.append(("{}: Saved converted image as jpeg.".format(ctime())))
+                img.save(destination,
+                         'jpeg',
+                         icc_profile=img.info.get("icc_profile"),
+                         quality=90,
+                         subsampling=1,
+                         progressive=True)
+        except OSError as e:
+            print("New direction")
+            with WImage(filename=source) as img:
+                img.save(filename=destination)
+                self.notes.append(("{}: Used Imagemagick to convert image to jpeg.".format(ctime())))
+
 
         return True
 

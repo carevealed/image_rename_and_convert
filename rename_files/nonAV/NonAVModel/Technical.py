@@ -70,12 +70,17 @@ class Technical(CAPS_node):
             if isinstance(width, int):
                 self.resolutionWidthUnit = "pixels"
                 self.resolutionWidth = width
+            # TODO REMOVE
+            elif width == "NA":
+                self.resolutionWidth = "NA"
             else:
                 raise TypeError("Expected int received " + str(type(width)))
         if height:
             if isinstance(height, int):
                 self.resolutionHeightUnit = "pixels"
                 self.resolutionHeight = height
+            elif height == "NA":
+                self.resolutionHeight = "NA"
             else:
                 raise TypeError("Expected int received " + str(type(height)))
 
@@ -230,9 +235,12 @@ class Technical(CAPS_node):
 
     @colorDepth.setter
     def colorDepth(self, value):
-        if not isinstance(value, int):
+        if isinstance(value, int):
+            self._colorDepth = value
+        elif value == "NA":
+            self._colorDepth = "NA"
+        else:
             raise TypeError("Expected an int, received " + str(type(value)))
-        self._colorDepth = value
 
 
     @property
@@ -251,9 +259,12 @@ class Technical(CAPS_node):
     @compressionMode.setter
     def compressionMode(self, value):
         # Todo: check if compression mode, it is the right ENUM
-        if not isinstance(value, CompressionModes):
+        if isinstance(value, CompressionModes):
+            self._compressionMode = value.value
+        elif value == "NA":
+            self._compressionMode = "NA"
+        else:
             raise TypeError("Expected an CompressionModes, received " + str(type(value)))
-        self._compressionMode = value.value
 
 
     @property

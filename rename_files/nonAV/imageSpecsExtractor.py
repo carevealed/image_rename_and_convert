@@ -9,6 +9,7 @@ import re
 __author__ = 'California Audio Visual Preservation Project'
 
 from PIL import Image, ExifTags
+from wand.image import Image as wImage
 from .NonAVModel.Technical import Technical, CompressionModes
 
 
@@ -33,6 +34,10 @@ def image_specs_extractor(file, technical_notes=None, media_info_path='mediainfo
 	compressionMode = None
 	bitDepth = None
 	imageFormat = None
+	compression = None
+	compressionMode = None
+	bitDepth = None
+	chroma_subsampling = None
 
 
 
@@ -41,49 +46,60 @@ def image_specs_extractor(file, technical_notes=None, media_info_path='mediainfo
 	file_format = mimetypes.types_map[os.path.splitext(file)[1].lower()]
 
 	# using pillow
-	im = Image.open(file)
-	height = im.size[1]
-	width = im.size[0]
-	compression = None
-	compressionMode = None
-	colorspace = im.mode
-	bitDepth = None
-	chroma_subsampling = None
-
-
-
-	# using MediaInfo
 	try:
-		mediaInfoData = subprocess.check_output([media_info_path, '--Output=XML', file], universal_newlines=True)
-	except FileNotFoundError as d:
-		raise MediaInfoException("Error running mediainfo" + str(d))
-	dom = parseString(mediaInfoData)
-	for node in dom.getElementsByTagName("Color_space"):
-		colorspace = node.firstChild.data
+		with Image.open(file) as im:
+			height = im.size[1]
+			width = im.size[0]
 
-	for node in dom.getElementsByTagName("Chroma_subsampling"):
-		chroma_subsampling = node.firstChild.data
+			colorspace = im.mode
 
-	for node in dom.getElementsByTagName("Format"):
-		imageFormat = node.firstChild.data
+			# using MediaInfo
+			try:
+				mediaInfoData = subprocess.check_output([media_info_path, '--Output=XML', file], universal_newlines=True)
+			except FileNotFoundError as d:
+				raise MediaInfoException("Error running mediainfo" + str(d))
+			dom = parseString(mediaInfoData)
+			for node in dom.getElementsByTagName("Color_space"):
+				colorspace = node.firstChild.data
 
-	for node in dom.getElementsByTagName("Compression_mode"):
-		compression = node.firstChild.data
-	if compression == "Lossy":
-		compressionMode = CompressionModes.LOSSY
-	elif compression == "Lossless":
-		compressionMode = CompressionModes.LOSSLESS
-	else:
-		compressionMode = CompressionModes.UNKNOWN
+			for node in dom.getElementsByTagName("Chroma_subsampling"):
+				chroma_subsampling = node.firstChild.data
 
-	try:
-		bitDepth = im.bits
-	except:
-		for node in dom.getElementsByTagName("Bit_depth"):
-			bd = node.firstChild.data
-			bitDepth = cleanup_bitdepth(bd)
+			for node in dom.getElementsByTagName("Format"):
+				imageFormat = node.firstChild.data
+
+			for node in dom.getElementsByTagName("Compression_mode"):
+				compression = node.firstChild.data
+			if compression == "Lossy":
+				compressionMode = CompressionModes.LOSSY
+			elif compression == "Lossless":
+				compressionMode = CompressionModes.LOSSLESS
+			else:
+				compressionMode = CompressionModes.UNKNOWN
+
+			try:
+				bitDepth = im.bits
+			except:
+				for node in dom.getElementsByTagName("Bit_depth"):
+					bd = node.firstChild.data
+					bitDepth = cleanup_bitdepth(bd)
+	except OSError as e:
+		print("Unable to use Pillow, Using ImageMagick instead")
+		with wImage(filename=file) as im:
+			imageFormat = im.format
+			height = im.width
+			width = im.height
+			bitDepth = im.depth
+			colorspace = im.colorspace
+			if compressionMode is None:
+				compressionMode = "NA"
+
+			pass
+		#TODO: get alternative metadata extractor
 
 	# print(dom.toprettyxml())
+
+
 
 	xml = Technical(fileFormat=file_format,
 					height=height,

@@ -241,23 +241,29 @@ class MainDialog(QDialog, Ui_Form):
             # filename = self.copyEngine.builder.find_file(file_id).source
             # self.pixmap.load(filename)
             newimage = QPixmap(filename)
-            imageMetadata = Image.open(filename)
+            try:
+                with Image.open(filename) as imageMetadata:
+                    self.le_color.setText(COLOR_MODES[imageMetadata.mode])
+                # scaled_image = newimage.scaledToWidth(self.preview_image.width())
+                top_size = self.frame_preview.height() - self.frame_7.height() - 20
+                scaled_image = newimage.scaledToHeight(top_size)
+                # print(scaled_image.height())
+                # print()
+                self.le_fileSize.setText((str(int(os.path.getsize(filename)/1024)) + " Kb"))
+                self.preview_image.setPixmap(scaled_image)
+                # self.preview_image.setMinimumWidth(scaled_image.width())
+                self.preview_image.setMinimumHeight(scaled_image.height())
+                self.le_fileName.setText(os.path.basename(filename))
+                resolution = str(newimage.width()) + " x " + str(newimage.height())
+
+                self.le_resolution.setText(resolution)
+            except OSError as e:
+                self.preview_image.clear()
+                # self.preview_image.setPixmap(0)
 
 
-            self.le_color.setText(COLOR_MODES[imageMetadata.mode])
-            # scaled_image = newimage.scaledToWidth(self.preview_image.width())
-            top_size = self.frame_preview.height() - self.frame_7.height() - 20
-            scaled_image = newimage.scaledToHeight(top_size)
-            # print(scaled_image.height())
-            # print()
-            self.le_fileSize.setText((str(int(os.path.getsize(filename)/1024)) + " Kb"))
-            self.preview_image.setPixmap(scaled_image)
-            # self.preview_image.setMinimumWidth(scaled_image.width())
-            self.preview_image.setMinimumHeight(scaled_image.height())
-            self.le_fileName.setText(os.path.basename(filename))
-            resolution = str(newimage.width()) + " x " + str(newimage.height())
 
-            self.le_resolution.setText(resolution)
+
 
     def update_status_message(self, packet):
         print(packet)
@@ -338,6 +344,8 @@ class MainDialog(QDialog, Ui_Form):
             smart = True
         else:
             smart = False
+        print("Searching for files")
+        #todo add loading screen
         self.load_files(source=self.lineEdit_source.text(), destination=self._destination, smart_sorting=smart)
 
     def _update_statusbar(self, message):
