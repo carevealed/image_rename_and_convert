@@ -2,14 +2,14 @@ from setuptools import setup, find_packages
 
 setup(
     name='rename_and_convert_images',
-    version='0.5.7',
+    version='0.6.0b0',
     # packages=['rename_files', 'rename_files.gui_datafiles', 'rename_files.data'],
     # package_data={'data': ['data.db']},
     packages=find_packages(),
     include_package_data=True,
     url='https://github.com/cavpp/rename_files',
     license='GPL',
-    install_requires=['setuptools >= 14.3.1', 'Pillow >=2.8.1'],
+    install_requires=['setuptools >= 14.3.1', 'Pillow >=2.8.1', 'Wand==0.4.1'],
     author='California Audio Visual Preservation Project',
     author_email='hborcher@berkeley.edu',
     zip_safe=False,
