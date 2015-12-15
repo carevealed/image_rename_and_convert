@@ -285,6 +285,11 @@ class Worker2(QThread):
             with WImage(filename=source) as img:
                 img.save(filename=destination)
                 self.notes.append(("{}: Used Imagemagick to convert image to jpeg.".format(ctime())))
+        except TypeError as e:
+            print("Type error")
+            with WImage(filename=source) as img:
+                img.save(filename=destination)
+                self.notes.append(("{}: Used Imagemagick to convert image to jpeg.".format(ctime())))
 
 
         return True
