@@ -14,8 +14,12 @@ __author__ = 'California Audio Visual Preservation Project'
 # from PySide.QtGui import *
 # from PySide.QtCore import *
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+try:
+    from PyQt4.QtGui import *
+    from PyQt4.QtCore import *
+except ImportError:
+    from PyQt5.QtGui import *
+    from PyQt5.QtCore import *
 # from PIL import Image, ImageQt
 from rename_files.renaming_model import RenameFactory, NameRecord
 from collections import namedtuple

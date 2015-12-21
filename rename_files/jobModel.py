@@ -2,8 +2,12 @@ from collections import namedtuple
 from enum import Enum
 import os
 import types
-from PyQt4.QtCore import QAbstractItemModel, QModelIndex, Qt, pyqtSignal, QVariant
-from PyQt4.QtGui import QColor
+try:
+    from PyQt4.QtCore import QAbstractItemModel, QModelIndex, Qt, pyqtSignal, QVariant
+    from PyQt4.QtGui import QColor
+except ImportError:
+    from PyQt5.QtCore import QAbstractItemModel, QModelIndex, Qt, pyqtSignal, QVariant
+    from PyQt5.QtGui import QColor
 __author__ = 'California Audio Visual Preservation Project'
 
 

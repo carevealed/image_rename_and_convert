@@ -9,8 +9,13 @@ from rename_files.jobModel import jobTreeNode, jobTreeModel, ObjectNode, PageNod
     DataRows
 
 __author__ = 'California Audio Visual Preservation Project'
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+try:
+    from PyQt4.QtGui import *
+    from PyQt4.QtCore import *
+except ImportError:
+    from PyQt5.QtGui import *
+    from PyQt5.QtCore import *
+    from PyQt5.QtWidgets import *
 from PIL import Image
 
 from rename_files.renaming_model import RenameFactory, ReportFactory, record_bundle, FileTypes, AccessExtensions, \
@@ -376,6 +381,8 @@ class MainDialog(QDialog, Ui_Form):
         job = None
         # self.connect(worker.updateStatus, status)
         while q.unfinished_tasks:
+            print("here")
+            print(q.qsize())
             if not worker.isRunning():
                 job = q.get()
                 worker = Worker2(self._destination, packet=job)
@@ -524,6 +531,7 @@ class MainDialog(QDialog, Ui_Form):
             print(complex_object)
 
     def _show_report(self):
+        print("Showing reports")
         job = self.reporter.current_batch
         report = ReportDialog(job)
         report.exec_()
@@ -534,6 +542,7 @@ class MainDialog(QDialog, Ui_Form):
             generate_report(self.reporter, os.path.join(self._destination, "report.csv"))
             # generate_report(self.reporter, os.path.join(self.copyEngine.builder.new_path, "report.csv"))
         except FileExistsError:
+            print("File exists")
             msg_box = QMessageBox()
             msg_box.setText("The saving location already has a report, do you wish to overwrite it?")
             msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
@@ -550,6 +559,7 @@ class MainDialog(QDialog, Ui_Form):
                 if save_box:
                     generate_report(self.reporter, os.path.join(self._destination, save_box))
     def _run_reports(self):
+        print("Running reports")
         checked = self.checkBox_IncludeReport.isChecked()
         if checked:
             self._save_report()
@@ -955,6 +965,7 @@ class ReportDialog(QDialog, Ui_dlg_report):
 
     def __init__(self, jobNumber, parent=None):
         super(ReportDialog, self).__init__(parent)
+        print("Opening report dialog")
         if not isinstance(jobNumber, int):
             raise TypeError("Only works with int type, received {}".format(type(jobNumber)))
         self.setupUi(self)
@@ -1046,6 +1057,7 @@ def excepthook(excType, excValue, tracebackobj):
             except IOError:
                 print("Error saving file")
     QApplication.quit()
+    exit(-1)
 
     # if error.clickedButton() == save:
 

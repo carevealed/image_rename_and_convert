@@ -1,7 +1,14 @@
 import os
 from rename_files.gui_datafiles.complex_gui import Ui_ComplexForm
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+try:
+	from PyQt4.QtCore import *
+	from PyQt4.QtGui import *
+
+except ImportError:
+	from PyQt5.QtCore import *
+	from PyQt5.QtGui import *
+	from PyQt5.QtWidgets import QDialog, QFileSystemModel
+
 class ComplexDialog(QDialog, Ui_ComplexForm):
 
 	def __init__(self, parent=None):

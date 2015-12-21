@@ -13,7 +13,8 @@ def generate_report(reporter, report_file_name):
         record_number = 0
         csv_file.writerow(["#", "Object ID", "Original Name:", "MD5 of original file", "Master Name:", "MD5 of master file", "Access File Name", "Access File MD5", "Internet Archive URL", "Message", "Technical Notes"])
         for record in records:
-            if record['type'] == "Master":
+            print(record)
+            if record['type'] == "Master" or record['type'] == "Preservation Master":
                 # project_id = record['project_id_prefix'] + "_" + str(record['project_id_number']).zfill(6)
                 object_id = record['object_id_prefix'] + "_" + str(record['object_id_number']).zfill(6)
                 original_name = record['original_name']
@@ -25,7 +26,7 @@ def generate_report(reporter, report_file_name):
                 # find an access file that matches the original source as the master file
                 found_access = False
                 for candidate in records:
-                    if candidate['original_name'] == record['original_name'] and candidate['type'] == "Access":
+                    if candidate['original_name'] == record['original_name'] and (candidate['type'] == "Access" or candidate['type'] == "Access Copy"):
                         access_name = candidate['new_name']
                         access_md5 = candidate['new_md5']
                         message = "Original file was named {}, which was renamed to {}. and an access file was produced from it " \

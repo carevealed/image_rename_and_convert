@@ -1,7 +1,10 @@
 
 import argparse
 import sys
-from PyQt4 import QtGui
+try:
+    from PyQt4 import QtGui
+except ImportError:
+    from PyQt5 import QtGui
 import sqlite3
 from rename_files.cli import *
 from rename_files.gui import *
